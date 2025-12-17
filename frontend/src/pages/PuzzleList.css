@@ -1,0 +1,217 @@
+.puzzle-list-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  animation: fadeIn 0.5s ease;
+}
+
+.puzzle-list-container h2 {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  text-align: center;
+}
+
+.subtitle {
+  color: var(--color-text-light);
+  margin-bottom: 3rem;
+  font-size: 1.2rem;
+  text-align: center;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.puzzle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.puzzle-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.puzzle-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.puzzle-card:hover::before {
+  transform: scaleX(1);
+}
+
+.puzzle-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+}
+
+.puzzle-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.puzzle-card h3 {
+  font-size: 1.4rem;
+  color: var(--color-text);
+  margin: 0;
+  flex: 1;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.puzzle-description {
+  color: var(--color-text-light);
+  line-height: 1.7;
+  margin-bottom: 20px;
+  flex-grow: 1;
+  font-size: 15px;
+}
+
+.puzzle-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  min-height: 28px;
+}
+
+.puzzle-card .tag {
+  transition: all 0.2s ease;
+}
+
+.puzzle-card:hover .tag {
+  background: #eef2ff;
+  color: #667eea;
+}
+
+.puzzle-card button {
+  width: 100%;
+  justify-content: center;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.puzzle-card button::after {
+  content: '→';
+  position: absolute;
+  right: 20px;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
+}
+
+.puzzle-card:hover button::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Loading State */
+.puzzle-list-container h2.loading {
+  background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Error Message */
+.error-message {
+  background: white;
+  border-radius: 16px;
+  padding: 48px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: 80px auto;
+  border: 2px solid #fee2e2;
+}
+
+.error-message h2 {
+  color: var(--color-error);
+  margin-bottom: 16px;
+  font-size: 1.8rem;
+}
+
+.error-message p {
+  color: var(--color-text-light);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .puzzle-list-container {
+    padding: 24px 16px;
+  }
+
+  .puzzle-list-container h2 {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .puzzle-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .puzzle-card {
+    padding: 20px;
+  }
+
+  .puzzle-card h3 {
+    font-size: 1.2rem;
+  }
+}
+
+/* Stagger animation for cards */
+.puzzle-card {
+  animation: fadeIn 0.5s ease backwards;
+}
+
+.puzzle-card:nth-child(1) { animation-delay: 0.05s; }
+.puzzle-card:nth-child(2) { animation-delay: 0.1s; }
+.puzzle-card:nth-child(3) { animation-delay: 0.15s; }
+.puzzle-card:nth-child(4) { animation-delay: 0.2s; }
+.puzzle-card:nth-child(5) { animation-delay: 0.25s; }
+.puzzle-card:nth-child(6) { animation-delay: 0.3s; }

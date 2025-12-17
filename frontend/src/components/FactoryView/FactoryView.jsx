@@ -1,0 +1,235 @@
+import { useState, useEffect } from 'react';
+import TimelineController from './TimelineController';
+import ClusterView from './ClusterView';
+import StageFlow from './StageFlow';
+import LiveMetrics from './LiveMetrics';
+import ConceptPanel from './ConceptPanel';
+import StageFlowView from './StageFlowView';
+import './FactoryView.css';
+
+/**
+ * FactoryView - Live Spark Execution Simulator
+ *
+ * Visualizes Spark execution step-by-step showing partitions, stages,
+ * shuffles, and parallelism in action.
+ */
+function FactoryView({ simulationData, stageFlowData }) {
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [currentState, setCurrentState] = useState(null);
+
+  // Debug logging
+  console.log('FactoryView - stageFlowData:', stageFlowData);
+  console.log('FactoryView - has stages:', stageFlowData?.stages?.length);
+
+  // If stage flow data is available, use the new interactive view
+  if (stageFlowData && stageFlowData.stages && stageFlowData.stages.length > 0) {
+    console.log('FactoryView - Rendering StageFlowView');
+    return <StageFlowView stageFlowData={stageFlowData} />;
+  }
+
+  // If no simulation data, show message
+  if (!simulationData) {
+    return (
+      <div className="factory-view-empty">
+        <div className="empty-state">
+          <h3>No Execution Simulation Available</h3>
+          <p>
+            Run your code to see a live visualization of how Spark executes it.
+            You'll see partitions flowing through stages, tasks running on nodes,
+            and data shuffling across the cluster.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { total_duration, stages, nodes, events, partitions, shuffles, metrics } = simulationData;
+
+  // Calculate current execution state based on currentTime
+  useEffect(() => {
+    if (!simulationData) return;
+
+    const state = calculateExecutionState(currentTime, simulationData);
+    setCurrentState(state);
+  }, [currentTime, simulationData]);
+
+  // Animation loop
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime((prevTime) => {
+        const nextTime = prevTime + (0.016 * playbackSpeed); // 60fps
+        if (nextTime >= total_duration) {
+          setIsPlaying(false);
+          return total_duration;
+        }
+        return nextTime;
+      });
+    }, 16); // 60fps
+
+    return () => clearInterval(interval);
+  }, [isPlaying, playbackSpeed, total_duration]);
+
+  const handlePlay = () => setIsPlaying(true);
+  const handlePause = () => setIsPlaying(false);
+  const handleReset = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+  const handleSpeedChange = (speed) => setPlaybackSpeed(speed);
+  const handleSeek = (time) => {
+    setCurrentTime(time);
+  };
+
+  return (
+    <div className="factory-view">
+      {/* Timeline Controls */}
+      <TimelineController
+        currentTime={currentTime}
+        totalDuration={total_duration}
+        isPlaying={isPlaying}
+        playbackSpeed={playbackSpeed}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onReset={handleReset}
+        onSpeedChange={handleSpeedChange}
+        onSeek={handleSeek}
+        events={events}
+      />
+
+      {/* Main Visualization Area */}
+      <div className="factory-canvas">
+        {/* Cluster View - Shows worker nodes */}
+        <ClusterView
+          nodes={nodes}
+          currentState={currentState}
+        />
+
+        {/* Stage Flow - Shows stages and their progress */}
+        <StageFlow
+          stages={stages}
+          shuffles={shuffles}
+          currentState={currentState}
+        />
+      </div>
+
+      {/* Live Metrics Panel */}
+      <LiveMetrics
+        currentState={currentState}
+        metrics={metrics}
+        partitionCount={partitions?.length || 0}
+      />
+
+      {/* Educational Concept Panel */}
+      <ConceptPanel
+        currentState={currentState}
+        simulationData={simulationData}
+      />
+    </div>
+  );
+}
+
+/**
+ * Calculate the current execution state at a given time
+ */
+function calculateExecutionState(time, simulationData) {
+  const { stages, events, nodes } = simulationData;
+
+  const activeStages = [];
+  const activeTasks = [];
+  const completedTasks = [];
+  const activeShuffles = [];
+  const tasksByNode = {};
+
+  // Initialize task tracking per node
+  nodes.forEach(node => {
+    tasksByNode[node.id] = {
+      active: [],
+      completed: 0
+    };
+  });
+
+  // Process all events up to current time
+  events.forEach(event => {
+    if (event.time > time) return;
+
+    switch (event.event_type) {
+      case 'stage_start':
+        const stage = stages.find(s => s.id === event.stage_id);
+        if (stage && !activeStages.includes(stage.id)) {
+          activeStages.push(stage.id);
+        }
+        break;
+
+      case 'stage_end':
+        const idx = activeStages.indexOf(event.stage_id);
+        if (idx > -1) {
+          activeStages.splice(idx, 1);
+        }
+        break;
+
+      case 'task_start':
+        const startStage = stages.find(s => s.id === event.stage_id);
+        if (startStage) {
+          const task = startStage.tasks.find(t => t.id === event.task_id);
+          if (task) {
+            activeTasks.push(task);
+            if (tasksByNode[task.node_id]) {
+              tasksByNode[task.node_id].active.push(task);
+            }
+          }
+        }
+        break;
+
+      case 'task_end':
+        const endStage = stages.find(s => s.id === event.stage_id);
+        if (endStage) {
+          const task = endStage.tasks.find(t => t.id === event.task_id);
+          if (task) {
+            const taskIdx = activeTasks.findIndex(t => t.id === task.id);
+            if (taskIdx > -1) {
+              activeTasks.splice(taskIdx, 1);
+            }
+            completedTasks.push(task);
+            if (tasksByNode[task.node_id]) {
+              tasksByNode[task.node_id].completed++;
+              const activeIdx = tasksByNode[task.node_id].active.findIndex(t => t.id === task.id);
+              if (activeIdx > -1) {
+                tasksByNode[task.node_id].active.splice(activeIdx, 1);
+              }
+            }
+          }
+        }
+        break;
+
+      case 'shuffle_start':
+        activeShuffles.push(event.details);
+        break;
+
+      case 'shuffle_end':
+        const shuffleIdx = activeShuffles.findIndex(
+          s => s.from_stage === event.details.from_stage && s.to_stage === event.details.to_stage
+        );
+        if (shuffleIdx > -1) {
+          activeShuffles.splice(shuffleIdx, 1);
+        }
+        break;
+    }
+  });
+
+  return {
+    time,
+    activeStages,
+    activeTasks,
+    completedTasks,
+    activeShuffles,
+    tasksByNode,
+    totalCompleted: completedTasks.length,
+    totalActive: activeTasks.length
+  };
+}
+
+export default FactoryView;

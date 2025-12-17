@@ -1,0 +1,171 @@
+.timeline-controller {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 20px;
+}
+
+.controls-top {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+.playback-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #667eea;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  background: #5568d3;
+  transform: scale(1.05);
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+}
+
+.reset-btn {
+  background: #6b7280;
+}
+
+.reset-btn:hover {
+  background: #4b5563;
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.speed-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.speed-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.speed-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.speed-btn.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+}
+
+.time-display {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #374151;
+}
+
+.current-time {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.time-separator {
+  color: #9ca3af;
+}
+
+.total-time {
+  color: #6b7280;
+}
+
+.timeline-scrubber {
+  position: relative;
+}
+
+.timeline-track {
+  position: relative;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.timeline-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+
+.timeline-input {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 100%;
+  height: 16px;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: -2px;
+  width: 4px;
+  height: 12px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.marker-stage {
+  background: #3b82f6;
+}
+
+.marker-shuffle {
+  background: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .controls-top {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .time-display {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+}

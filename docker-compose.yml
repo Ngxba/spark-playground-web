@@ -1,0 +1,54 @@
+services:
+  spark-history:
+    build: ./spark-history
+    container_name: spark-history-server
+    ports:
+      - "18080:18080"  # Spark History Server UI
+    volumes:
+      - spark-events:/tmp/spark-events
+      - ./spark-history/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+    networks:
+      - spark-playground-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build: ./backend
+    container_name: spark-playground-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - spark-events:/tmp/spark-events
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SPARK_EVENT_LOG_DIR=/tmp/spark-events
+    depends_on:
+      - spark-history
+    networks:
+      - spark-playground-network
+
+  frontend:
+    build: ./frontend
+    container_name: spark-playground-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    networks:
+      - spark-playground-network
+
+networks:
+  spark-playground-network:
+    driver: bridge
+
+volumes:
+  spark-events:
