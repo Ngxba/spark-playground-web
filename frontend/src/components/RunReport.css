@@ -115,6 +115,32 @@
   background: #f8f9fa;
   border-bottom: 2px solid #e0e0e0;
   overflow-x: auto;
+  overflow-y: visible;
+  flex-shrink: 0;
+  min-height: 60px;
+  align-items: stretch;
+  position: relative;
+  z-index: 10;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f8f9fa;
+}
+
+.report-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.report-tabs::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.report-tabs::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.report-tabs::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 
 .report-tab {
@@ -128,6 +154,11 @@
   color: #666;
   white-space: nowrap;
   transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: fit-content;
 }
 
 .report-tab:hover {
@@ -145,6 +176,9 @@
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .report-section {
@@ -310,4 +344,32 @@
 .btn-spark-ui:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+/* Responsive styles for tabs */
+@media (max-width: 768px) {
+  .report-tabs {
+    min-height: 50px;
+  }
+
+  .report-tab {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .run-report-modal {
+    width: 98%;
+    max-height: 95vh;
+  }
+
+  .run-report-content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-tab {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
 }
