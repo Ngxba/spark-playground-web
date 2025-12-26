@@ -33,12 +33,14 @@
 }
 
 .factory-canvas {
+  position: relative;
   flex: 1;
   padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-height: 600px;
 }
 
 /* Responsive design */

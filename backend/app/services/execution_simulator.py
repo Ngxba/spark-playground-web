@@ -75,8 +75,8 @@ class ExecutionSimulator:
             # Detect and generate shuffles
             shuffles = self._generate_shuffles(stages, stages_info)
 
-            # Generate partitions
-            partitions = self._generate_partitions(partition_count)
+            # Generate partitions with lineage tracking
+            partitions = self._generate_partitions_with_lineage(stages, shuffles)
 
             # Generate timeline events
             events = self._generate_events(stages, shuffles)
@@ -324,6 +324,13 @@ class ExecutionSimulator:
                     # Estimate shuffle data volume (simplified)
                     data_volume_mb = len(current_stage.tasks) * 2.5  # ~2.5MB per task
 
+                    # Generate partition mapping for this shuffle
+                    partition_mapping = self._generate_partition_mapping(
+                        from_count=len(current_stage.tasks),
+                        to_count=len(next_stage.tasks),
+                        shuffle_type="hash"  # Default to hash partitioning
+                    )
+
                     shuffle = Shuffle(
                         from_stage_id=current_stage.id,
                         to_stage_id=next_stage.id,
@@ -331,23 +338,180 @@ class ExecutionSimulator:
                         from_partitions=len(current_stage.tasks),
                         to_partitions=len(next_stage.tasks),
                         start_time=current_stage.end_time,
-                        end_time=next_stage.start_time
+                        end_time=next_stage.start_time,
+                        partition_mapping=partition_mapping
                     )
                     shuffles.append(shuffle)
 
         return shuffles
 
+    def _generate_partition_mapping(
+        self,
+        from_count: int,
+        to_count: int,
+        shuffle_type: str = "hash"
+    ) -> Dict[int, List[int]]:
+        """
+        Generate partition mapping for shuffle operations
+
+        Args:
+            from_count: Number of source partitions
+            to_count: Number of destination partitions
+            shuffle_type: Type of shuffle (hash, range, broadcast)
+
+        Returns:
+            Mapping of source partition ID -> list of destination partition IDs
+        """
+        mapping = {}
+
+        if shuffle_type == "broadcast":
+            # Broadcast: each source goes to all destinations
+            for i in range(from_count):
+                mapping[i] = list(range(to_count))
+        elif shuffle_type == "hash":
+            # Hash partitioning: simulate hash-based distribution
+            # For simplicity: each source contributes to all destinations (all-to-all)
+            # In real scenario, this would be based on key distribution
+            for i in range(from_count):
+                mapping[i] = list(range(to_count))
+        elif shuffle_type == "range":
+            # Range partitioning: ordered distribution
+            # Divide source partitions among destination partitions
+            sources_per_dest = from_count / to_count if to_count > 0 else 1
+            for i in range(from_count):
+                dest_idx = min(int(i / sources_per_dest), to_count - 1)
+                if i not in mapping:
+                    mapping[i] = []
+                if dest_idx < to_count:
+                    mapping[i].append(dest_idx)
+        else:
+            # Default: all-to-all
+            for i in range(from_count):
+                mapping[i] = list(range(to_count))
+
+        return mapping
+
     def _generate_partitions(self, partition_count: int) -> List[Partition]:
-        """Generate partition metadata"""
+        """
+        Generate partition metadata (legacy method, kept for compatibility)
+        Note: Use _generate_partitions_with_lineage() for lineage tracking
+        """
         partitions = []
         for i in range(partition_count):
             partitions.append(Partition(
                 id=i,
                 size_mb=2.5,  # Simulated size
                 records_count=1000,  # Simulated record count
-                data_preview=None  # Could add sample data
+                data_preview=None,  # Could add sample data
+                stage_id=0,  # Default stage
+                parent_partitions=[],
+                child_partitions=[]
             ))
         return partitions
+
+    def _generate_partitions_with_lineage(
+        self,
+        stages: List[Stage],
+        shuffles: List[Shuffle]
+    ) -> List[Partition]:
+        """
+        Generate partitions with lineage tracking
+
+        Args:
+            stages: All execution stages
+            shuffles: All shuffle operations
+
+        Returns:
+            List of partitions with parent/child relationships
+        """
+        partitions = []
+        partition_id_counter = 0
+        partitions_by_stage = {}
+
+        # Create partitions for each stage
+        for stage in stages:
+            stage_partition_ids = []
+            num_partitions = len(stage.tasks)
+
+            for i in range(num_partitions):
+                partition = Partition(
+                    id=partition_id_counter,
+                    size_mb=2.5,  # Simulated size
+                    records_count=1000,  # Simulated record count
+                    data_preview=None,
+                    stage_id=stage.id,
+                    parent_partitions=[],
+                    child_partitions=[]
+                )
+                partitions.append(partition)
+                stage_partition_ids.append(partition_id_counter)
+                partition_id_counter += 1
+
+            partitions_by_stage[stage.id] = stage_partition_ids
+
+        # Build lineage relationships
+        self._build_partition_lineage(partitions, partitions_by_stage, stages, shuffles)
+
+        return partitions
+
+    def _build_partition_lineage(
+        self,
+        partitions: List[Partition],
+        partitions_by_stage: Dict[int, List[int]],
+        stages: List[Stage],
+        shuffles: List[Shuffle]
+    ) -> None:
+        """
+        Build parent/child relationships between partitions based on stage dependencies
+
+        Args:
+            partitions: List of all partitions (modified in-place)
+            partitions_by_stage: Mapping of stage_id -> list of partition IDs
+            stages: All execution stages
+            shuffles: All shuffle operations
+        """
+        # Create partition lookup by ID
+        partition_lookup = {p.id: p for p in partitions}
+
+        # Process each stage to determine lineage
+        for stage in stages:
+            if not stage.dependencies:
+                continue  # First stage has no parents
+
+            current_partition_ids = partitions_by_stage[stage.id]
+
+            for parent_stage_id in stage.dependencies:
+                parent_partition_ids = partitions_by_stage[parent_stage_id]
+
+                # Check if there's a shuffle between these stages
+                shuffle = next(
+                    (s for s in shuffles if s.from_stage_id == parent_stage_id and s.to_stage_id == stage.id),
+                    None
+                )
+
+                if shuffle and shuffle.partition_mapping:
+                    # Wide dependency: use partition mapping
+                    for parent_id, dest_ids in shuffle.partition_mapping.items():
+                        if parent_id not in partition_lookup:
+                            continue
+                        parent_partition = partition_lookup[parent_id]
+                        for dest_id in dest_ids:
+                            if dest_id in partition_lookup:
+                                child_partition = partition_lookup[dest_id]
+                                if parent_id not in child_partition.parent_partitions:
+                                    child_partition.parent_partitions.append(parent_id)
+                                if dest_id not in parent_partition.child_partitions:
+                                    parent_partition.child_partitions.append(dest_id)
+                else:
+                    # Narrow dependency: 1-to-1 mapping
+                    for i, child_id in enumerate(current_partition_ids):
+                        parent_id = parent_partition_ids[i % len(parent_partition_ids)]
+                        child_partition = partition_lookup[child_id]
+                        parent_partition = partition_lookup[parent_id]
+                        if parent_id not in child_partition.parent_partitions:
+                            child_partition.parent_partitions.append(parent_id)
+                        if child_id not in parent_partition.child_partitions:
+                            parent_partition.child_partitions.append(child_id)
 
     def _generate_events(
         self,

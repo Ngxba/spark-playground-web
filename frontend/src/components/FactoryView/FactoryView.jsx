@@ -5,6 +5,8 @@ import StageFlow from './StageFlow';
 import LiveMetrics from './LiveMetrics';
 import ConceptPanel from './ConceptPanel';
 import StageFlowView from './StageFlowView';
+import ParticleAnimationEngine from './animations/ParticleAnimationEngine';
+import ExecutionDiagram from './ExecutionDiagram';
 import './FactoryView.css';
 
 /**
@@ -18,6 +20,7 @@ function FactoryView({ simulationData, stageFlowData }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentState, setCurrentState] = useState(null);
+  const [partitionPositions, setPartitionPositions] = useState({});
 
   // Debug logging
   console.log('FactoryView - stageFlowData:', stageFlowData);
@@ -54,6 +57,36 @@ function FactoryView({ simulationData, stageFlowData }) {
     const state = calculateExecutionState(currentTime, simulationData);
     setCurrentState(state);
   }, [currentTime, simulationData]);
+
+  // Calculate partition positions for particle animation
+  useEffect(() => {
+    if (!simulationData) return;
+
+    const positions = {};
+    const { partitions, stages } = simulationData;
+
+    // Group partitions by stage
+    const partsByStage = {};
+    partitions.forEach(p => {
+      if (!partsByStage[p.stage_id]) partsByStage[p.stage_id] = [];
+      partsByStage[p.stage_id].push(p);
+    });
+
+    // Calculate positions
+    stages.forEach((stage, stageIdx) => {
+      const stageX = 100 + stageIdx * 250;
+      const stageParts = partsByStage[stage.id] || [];
+
+      stageParts.forEach((partition, partIdx) => {
+        positions[partition.id] = {
+          x: stageX + 125,
+          y: 150 + partIdx * 40,
+        };
+      });
+    });
+
+    setPartitionPositions(positions);
+  }, [simulationData]);
 
   // Animation loop
   useEffect(() => {
@@ -100,8 +133,14 @@ function FactoryView({ simulationData, stageFlowData }) {
         events={events}
       />
 
+      {/* Detailed Execution Diagram */}
+      <ExecutionDiagram
+        simulationData={simulationData}
+        currentState={currentState}
+      />
+
       {/* Main Visualization Area */}
-      <div className="factory-canvas">
+      <div className="factory-canvas" style={{ position: 'relative' }}>
         {/* Cluster View - Shows worker nodes */}
         <ClusterView
           nodes={nodes}
@@ -113,6 +152,15 @@ function FactoryView({ simulationData, stageFlowData }) {
           stages={stages}
           shuffles={shuffles}
           currentState={currentState}
+        />
+
+        {/* Particle Animation Overlay */}
+        <ParticleAnimationEngine
+          simulationData={simulationData}
+          currentTime={currentTime}
+          isPlaying={isPlaying}
+          playbackSpeed={playbackSpeed}
+          partitionPositions={partitionPositions}
         />
       </div>
 

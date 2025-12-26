@@ -19,6 +19,11 @@ class Partition(BaseModel):
     records_count: int = Field(description="Approximate number of records")
     data_preview: Optional[List[Dict[str, Any]]] = Field(default=None, description="Sample data from partition")
 
+    # Lineage tracking fields
+    stage_id: int = Field(description="Stage this partition belongs to")
+    parent_partitions: List[int] = Field(default_factory=list, description="Parent partition IDs for lineage tracking")
+    child_partitions: List[int] = Field(default_factory=list, description="Child partition IDs for lineage tracking")
+
 class Shuffle(BaseModel):
     """Represents a shuffle operation between stages"""
     from_stage_id: int = Field(description="Source stage ID")
@@ -28,6 +33,12 @@ class Shuffle(BaseModel):
     to_partitions: int = Field(description="Number of partitions in destination")
     start_time: float = Field(description="Shuffle start time")
     end_time: float = Field(description="Shuffle end time")
+
+    # Partition mapping for visualization
+    partition_mapping: Dict[int, List[int]] = Field(
+        default_factory=dict,
+        description="Maps source partition IDs to dest partition IDs {source: [dest1, dest2]}"
+    )
 
 class Stage(BaseModel):
     """Represents a Spark execution stage"""
