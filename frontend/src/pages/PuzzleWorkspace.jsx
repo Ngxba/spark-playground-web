@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { puzzleService } from '../services/api';
 import ScenarioPanel from '../components/ScenarioPanel';
-import RunReport from '../components/RunReport';
 import ReferencePanel from '../components/ReferencePanel';
 import './PuzzleWorkspace.css';
 
@@ -17,10 +16,18 @@ function PuzzleWorkspace() {
   const [error, setError] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runResult, setRunResult] = useState(null);
-  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     loadPuzzle();
+    // Load last run result from sessionStorage
+    const savedResult = sessionStorage.getItem(`puzzle_${puzzleId}_last_run`);
+    if (savedResult) {
+      try {
+        setRunResult(JSON.parse(savedResult));
+      } catch (err) {
+        console.error('Failed to parse saved run result:', err);
+      }
+    }
   }, [puzzleId]);
 
   const loadPuzzle = async () => {
@@ -47,7 +54,6 @@ function PuzzleWorkspace() {
     try {
       setIsRunning(true);
       setRunResult(null);
-      setShowReport(false);
 
       const result = await puzzleService.runPuzzle(puzzleId, code);
 
@@ -55,7 +61,8 @@ function PuzzleWorkspace() {
       setTimeout(() => {
         setRunResult(result);
         setIsRunning(false);
-        setShowReport(true);
+        // Save result to sessionStorage
+        sessionStorage.setItem(`puzzle_${puzzleId}_last_run`, JSON.stringify(result));
       }, 2000);
     } catch (err) {
       setIsRunning(false);
@@ -68,7 +75,8 @@ function PuzzleWorkspace() {
     if (puzzle) {
       setCode(puzzle.starter_code || '# Write your code here\n');
       setRunResult(null);
-      setShowReport(false);
+      // Clear saved run result
+      sessionStorage.removeItem(`puzzle_${puzzleId}_last_run`);
     }
   };
 
@@ -150,9 +158,9 @@ function PuzzleWorkspace() {
               >
                 Reset
               </button>
-              {runResult && !showReport && (
+              {runResult && (
                 <button
-                  onClick={() => setShowReport(true)}
+                  onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })}
                   className="btn-info"
                   title="View the last run report"
                 >
@@ -199,18 +207,13 @@ function PuzzleWorkspace() {
                   </span>
                 ))}
               </div>
-              <button onClick={() => setShowReport(true)} className="btn-primary">
+              <button onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })} className="btn-primary">
                 View Full Report
               </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Run Report Modal */}
-      {showReport && runResult && (
-        <RunReport result={runResult} onClose={() => setShowReport(false)} />
-      )}
     </div>
   );
 }

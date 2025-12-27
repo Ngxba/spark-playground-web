@@ -1,18 +1,39 @@
-import { useState } from 'react';
-import MetricTooltip from './MetricTooltip';
-import ResultsTable from './ResultsTable';
-import ExecutionInsights from './ExecutionInsights';
-import ProgressiveHints from './ProgressiveHints';
-import QueryPlanViewer from './QueryPlanViewer';
-import FactoryView from './FactoryView/FactoryView';
-import ClusterOverview from './ClusterOverview';
-import ConceptPanel from './FactoryView/ConceptPanel';
-import './RunReport.css';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import MetricTooltip from '../components/MetricTooltip';
+import ResultsTable from '../components/ResultsTable';
+import ExecutionInsights from '../components/ExecutionInsights';
+import ProgressiveHints from '../components/ProgressiveHints';
+import QueryPlanViewer from '../components/QueryPlanViewer';
+import FactoryView from '../components/FactoryView/FactoryView';
+import ClusterOverview from '../components/ClusterOverview';
+import ConceptPanel from '../components/FactoryView/ConceptPanel';
+import './ReportPage.css';
 
-function RunReport({ result, onClose }) {
+function ReportPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { puzzleId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
 
+  // Get result from navigation state
+  const result = location.state?.result;
+
+  // Protection: Redirect if no run data
+  useEffect(() => {
+    if (!result) {
+      console.warn('No run result data found. Redirecting to puzzle workspace.');
+      navigate(`/puzzle/${puzzleId}`, { replace: true });
+    }
+  }, [result, navigate, puzzleId]);
+
+  // Don't render anything while redirecting
   if (!result) return null;
+
+  const handleBack = () => {
+    // Use browser back to return to workspace
+    navigate(-1);
+  };
 
   const renderStars = (count) => {
     return (
@@ -27,9 +48,12 @@ function RunReport({ result, onClose }) {
   };
 
   return (
-    <div className="run-report-overlay" onClick={onClose}>
-      <div className="run-report-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="run-report-header">
+    <div className="report-page-container">
+      <div className="report-page-content">
+        <div className="report-page-header">
+          <button className="back-button" onClick={handleBack}>
+            ← Back to Workspace
+          </button>
           <div className="header-content">
             <h2>Run Report</h2>
             <div className="header-status">
@@ -41,9 +65,6 @@ function RunReport({ result, onClose }) {
               {result.correct && renderStars(result.stars)}
             </div>
           </div>
-          <button className="close-button" onClick={onClose}>
-            ×
-          </button>
         </div>
 
         <div className="report-tabs">
@@ -97,7 +118,7 @@ function RunReport({ result, onClose }) {
           </button>
         </div>
 
-        <div className="run-report-content">
+        <div className="report-page-main">
           {activeTab === 'overview' && (
             <>
               {/* Error message */}
@@ -239,7 +260,7 @@ function RunReport({ result, onClose }) {
           )}
         </div>
 
-        <div className="run-report-footer">
+        <div className="report-page-footer">
           {result.spark_ui_url && (
             <a
               href={result.spark_ui_url}
@@ -250,8 +271,8 @@ function RunReport({ result, onClose }) {
               📊 View This Job in Spark UI
             </a>
           )}
-          <button className="btn-primary" onClick={onClose}>
-            Close
+          <button className="btn-primary" onClick={handleBack}>
+            Back to Workspace
           </button>
         </div>
       </div>
@@ -259,4 +280,4 @@ function RunReport({ result, onClose }) {
   );
 }
 
-export default RunReport;
+export default ReportPage;

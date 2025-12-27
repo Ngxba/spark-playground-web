@@ -175,7 +175,6 @@ function TimelineController({
               <div className="stage-marker-label">
                 S{marker.stage.id}
               </div>
-              <div className="marker-connector"></div>
             </div>
           ))}
 
@@ -187,7 +186,6 @@ function TimelineController({
             title={`End: ${formatTime(totalDuration)}`}
           >
             <div className="end-marker-label">End</div>
-            <div className="marker-connector"></div>
           </div>
         </div>
 

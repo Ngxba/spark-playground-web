@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PuzzleList from './pages/PuzzleList';
 import PuzzleWorkspace from './pages/PuzzleWorkspace';
+import ReportPage from './pages/ReportPage';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Routes>
             <Route path="/" element={<PuzzleList />} />
             <Route path="/puzzle/:puzzleId" element={<PuzzleWorkspace />} />
+            <Route path="/puzzle/:puzzleId/report" element={<ReportPage />} />
           </Routes>
         </main>
       </div>

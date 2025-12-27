@@ -4,7 +4,7 @@ import ClusterView from './ClusterView';
 import StageFlow from './StageFlow';
 import LiveMetrics from './LiveMetrics';
 import StageFlowView from './StageFlowView';
-import ParticleAnimationEngine from './animations/ParticleAnimationEngine';
+// import ParticleAnimationEngine from './animations/ParticleAnimationEngine'; // DISABLED
 import ExecutionDiagram from './ExecutionDiagram';
 import './FactoryView.css';
 
@@ -166,14 +166,14 @@ function FactoryView({ simulationData, stageFlowData }) {
           onStageClick={handleStageSelect}
         />
 
-        {/* [A3.3] Particle Animation Overlay */}
-        <ParticleAnimationEngine
+        {/* [A3.3] Particle Animation Overlay - DISABLED */}
+        {/* <ParticleAnimationEngine
           simulationData={simulationData}
           currentTime={currentTime}
           isPlaying={isPlaying}
           playbackSpeed={playbackSpeed}
           partitionPositions={partitionPositions}
-        />
+        /> */}
       </div>
 
       {/* [A4] Live Metrics Panel */}
