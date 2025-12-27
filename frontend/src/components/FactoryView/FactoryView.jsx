@@ -3,7 +3,6 @@ import TimelineController from './TimelineController';
 import ClusterView from './ClusterView';
 import StageFlow from './StageFlow';
 import LiveMetrics from './LiveMetrics';
-import ConceptPanel from './ConceptPanel';
 import StageFlowView from './StageFlowView';
 import ParticleAnimationEngine from './animations/ParticleAnimationEngine';
 import ExecutionDiagram from './ExecutionDiagram';
@@ -21,16 +20,11 @@ function FactoryView({ simulationData, stageFlowData }) {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentState, setCurrentState] = useState(null);
   const [partitionPositions, setPartitionPositions] = useState({});
+  const [selectedStageIndex, setSelectedStageIndex] = useState(0); // Shared stage selection
 
   // Debug logging
+  console.log('FactoryView - simulationData:', simulationData);
   console.log('FactoryView - stageFlowData:', stageFlowData);
-  console.log('FactoryView - has stages:', stageFlowData?.stages?.length);
-
-  // If stage flow data is available, use the new interactive view
-  if (stageFlowData && stageFlowData.stages && stageFlowData.stages.length > 0) {
-    console.log('FactoryView - Rendering StageFlowView');
-    return <StageFlowView stageFlowData={stageFlowData} />;
-  }
 
   // If no simulation data, show message
   if (!simulationData) {
@@ -49,6 +43,13 @@ function FactoryView({ simulationData, stageFlowData }) {
   }
 
   const { total_duration, stages, nodes, events, partitions, shuffles, metrics } = simulationData;
+
+  // Auto-play when simulation loads
+  useEffect(() => {
+    if (simulationData && !isPlaying && currentTime === 0) {
+      setIsPlaying(true);
+    }
+  }, [simulationData]);
 
   // Calculate current execution state based on currentTime
   useEffect(() => {
@@ -106,55 +107,66 @@ function FactoryView({ simulationData, stageFlowData }) {
     return () => clearInterval(interval);
   }, [isPlaying, playbackSpeed, total_duration]);
 
-  const handlePlay = () => setIsPlaying(true);
-  const handlePause = () => setIsPlaying(false);
-  const handleReset = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-  const handleSpeedChange = (speed) => setPlaybackSpeed(speed);
   const handleSeek = (time) => {
     setCurrentTime(time);
   };
 
+  // Handle stage selection - updates both selected stage and seeks to stage start time
+  const handleStageSelect = (stageIndex) => {
+    setSelectedStageIndex(stageIndex);
+
+    // Find the stage's start time from events
+    const stage = stages[stageIndex];
+    if (stage && events) {
+      const stageStartEvent = events.find(
+        e => e.event_type === 'stage_start' && e.stage_id === stage.id
+      );
+      if (stageStartEvent) {
+        setCurrentTime(stageStartEvent.time);
+        setIsPlaying(false); // Pause playback when manually selecting a stage
+      }
+    }
+  };
+
   return (
     <div className="factory-view">
-      {/* Timeline Controls */}
+      {/* [A1] Timeline Visualization */}
       <TimelineController
         currentTime={currentTime}
         totalDuration={total_duration}
-        isPlaying={isPlaying}
-        playbackSpeed={playbackSpeed}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onReset={handleReset}
-        onSpeedChange={handleSpeedChange}
         onSeek={handleSeek}
         events={events}
+        stages={stages}
+        selectedStageIndex={selectedStageIndex}
+        onStageSelect={handleStageSelect}
       />
 
-      {/* Detailed Execution Diagram */}
+      {/* [A2] Detailed Execution Diagram */}
       <ExecutionDiagram
         simulationData={simulationData}
         currentState={currentState}
+        selectedStageIndex={selectedStageIndex}
+        onStageSelect={handleStageSelect}
       />
 
-      {/* Main Visualization Area */}
+      {/* [A3] Main Visualization Area */}
       <div className="factory-canvas" style={{ position: 'relative' }}>
-        {/* Cluster View - Shows worker nodes */}
+        {/* [A3.1] Cluster View - Shows worker nodes */}
         <ClusterView
           nodes={nodes}
           currentState={currentState}
         />
 
-        {/* Stage Flow - Shows stages and their progress */}
+        {/* [A3.2] Stage Flow - Shows stages and their progress */}
         <StageFlow
           stages={stages}
           shuffles={shuffles}
           currentState={currentState}
+          selectedStageIndex={selectedStageIndex}
+          onStageClick={handleStageSelect}
         />
 
-        {/* Particle Animation Overlay */}
+        {/* [A3.3] Particle Animation Overlay */}
         <ParticleAnimationEngine
           simulationData={simulationData}
           currentTime={currentTime}
@@ -164,18 +176,23 @@ function FactoryView({ simulationData, stageFlowData }) {
         />
       </div>
 
-      {/* Live Metrics Panel */}
+      {/* [A4] Live Metrics Panel */}
       <LiveMetrics
         currentState={currentState}
         metrics={metrics}
         partitionCount={partitions?.length || 0}
       />
 
-      {/* Educational Concept Panel */}
-      <ConceptPanel
-        currentState={currentState}
-        simulationData={simulationData}
-      />
+      {/* [A5] Stage Flow View - Stage-by-Stage Interactive Visualization */}
+      {stageFlowData && stageFlowData.stages && stageFlowData.stages.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <StageFlowView
+            stageFlowData={stageFlowData}
+            selectedStageIndex={selectedStageIndex}
+            onStageSelect={handleStageSelect}
+          />
+        </div>
+      )}
     </div>
   );
 }

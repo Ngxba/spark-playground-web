@@ -15,19 +15,56 @@
 .stages-container {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 20px;
   overflow-x: auto;
-  padding: 20px 0;
+  padding: 24px 0;
+  padding-left: 4px;
+}
+
+/* Pipeline Boundary Markers */
+.pipeline-boundary-marker {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boundary-marker-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 2px solid #d1d5db;
+  border-radius: 10px;
+  min-width: 70px;
+}
+
+.boundary-marker-icon {
+  font-size: 20px;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.boundary-marker-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stage-container {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  gap: 20px;
+  flex: 0 0 auto;
 }
 
 .stage {
-  min-width: 250px;
+  flex: 0 0 auto;
+  width: 280px;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
   background: white;
@@ -60,35 +97,63 @@
   background: #f0fdf4;
 }
 
+.stage-clickable {
+  cursor: pointer;
+}
+
+.stage-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stage-selected {
+  border-color: #3b82f6 !important;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.stage-selected.stage-clickable:hover {
+  transform: translateY(-2px);
+}
+
 .stage-header {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
   border-left: 4px solid;
-  padding-left: 12px;
+  padding-left: 10px;
 }
 
 .stage-icon {
-  font-size: 24px;
+  font-size: 22px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .stage-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .stage-name {
   font-weight: 600;
   color: #374151;
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .stage-meta {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .stage-status-badge {
@@ -101,7 +166,7 @@
   background: #e5e7eb;
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .stage-progress-bar {
@@ -111,9 +176,10 @@
 }
 
 .stage-tasks {
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
   text-align: right;
+  font-weight: 600;
 }
 
 .tasks-active {
@@ -128,8 +194,10 @@
 
 /* Connectors */
 .stage-connector {
-  padding: 0 12px;
-  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .connector-arrow {
@@ -139,21 +207,23 @@
 
 .shuffle-connector {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 0 12px;
-  position: relative;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .shuffle-icon {
   background: #fef3c7;
   border: 2px solid #fbbf24;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  z-index: 1;
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.2);
 }
 
 .shuffle-icon span:first-child {
@@ -161,18 +231,16 @@
 }
 
 .shuffle-label {
-  font-size: 11px;
+  font-size: 12px;
   color: #92400e;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .connector-line {
-  position: absolute;
-  left: 0;
-  right: 0;
+  width: 60px;
   height: 2px;
   background: linear-gradient(90deg, #fbbf24 0%, #ef4444 50%, #fbbf24 100%);
-  z-index: 0;
 }
 
 /* Responsive */

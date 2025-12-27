@@ -3,7 +3,7 @@ import './StageFlow.css';
 /**
  * StageFlow - Visualizes execution stages and their progress
  */
-function StageFlow({ stages, shuffles, currentState }) {
+function StageFlow({ stages, shuffles, currentState, selectedStageIndex, onStageClick }) {
   if (!stages || stages.length === 0) {
     return null;
   }
@@ -69,26 +69,39 @@ function StageFlow({ stages, shuffles, currentState }) {
 
   return (
     <div className="stage-flow">
-      <h4 className="stage-flow-title">Execution Pipeline: {stages.length} Stages</h4>
+      <h4 className="stage-flow-title">[A3.2] Execution Pipeline: {stages.length} Stages</h4>
       <div className="stages-container">
+        {/* Start Boundary Marker */}
+        <div className="pipeline-boundary-marker">
+          <div className="boundary-marker-box">
+            <div className="boundary-marker-icon">▶</div>
+            <div className="boundary-marker-text">Start</div>
+          </div>
+        </div>
+
         {stages.map((stage, idx) => {
           const status = getStageStatus(stage);
           const progress = getStageProgress(stage);
           const icon = getOperationIcon(stage.operation_type);
           const color = getOperationColor(stage.operation_type);
+          const isSelected = selectedStageIndex === idx;
 
           // Check for shuffle after this stage
           const shuffleAfter = shuffles?.find(s => s.from_stage_id === stage.id);
 
           return (
             <div key={stage.id} className="stage-container">
-              <div className={`stage stage-${status}`}>
+              <div
+                className={`stage stage-${status} ${isSelected ? 'stage-selected' : ''} ${onStageClick ? 'stage-clickable' : ''}`}
+                onClick={() => onStageClick && onStageClick(idx)}
+                title={onStageClick ? `Click to focus on Stage ${idx}` : ''}
+              >
                 <div className="stage-header" style={{ borderColor: color }}>
                   <span className="stage-icon">{icon}</span>
                   <div className="stage-info">
                     <div className="stage-name">{stage.name}</div>
                     <div className="stage-meta">
-                      Stage {stage.id} • {stage.tasks.length} tasks • {stage.parallelism} parallel
+                      <span>Stage {stage.id} • {stage.tasks.length} tasks • {stage.parallelism} parallel</span>
                     </div>
                   </div>
                   <div className="stage-status-badge">
@@ -129,6 +142,7 @@ function StageFlow({ stages, shuffles, currentState }) {
               {/* Shuffle Indicator */}
               {shuffleAfter && idx < stages.length - 1 && (
                 <div className="shuffle-connector">
+                  <div className="connector-line" />
                   <div className="shuffle-icon" title={`Shuffle: ${shuffleAfter.data_volume_mb.toFixed(1)} MB`}>
                     <span>🔀</span>
                     <span className="shuffle-label">
@@ -148,6 +162,14 @@ function StageFlow({ stages, shuffles, currentState }) {
             </div>
           );
         })}
+
+        {/* End Boundary Marker */}
+        <div className="pipeline-boundary-marker">
+          <div className="boundary-marker-box">
+            <div className="boundary-marker-icon">⏹</div>
+            <div className="boundary-marker-text">End</div>
+          </div>
+        </div>
       </div>
     </div>
   );

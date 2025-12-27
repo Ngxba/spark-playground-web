@@ -19,6 +19,8 @@ function ParticleAnimationEngine({
   const nextParticleIdRef = useRef(0);
   const animationFrameRef = useRef(null);
   const lastTimeRef = useRef(0);
+  const previousTimeRef = useRef(0);  // Track previous simulation time
+  const lastSpawnTimeRef = useRef({});  // Track last spawn time per path
 
   // Configuration
   const CONFIG = {
@@ -114,18 +116,53 @@ function ParticleAnimationEngine({
   }
 
   /**
-   * Spawn particles based on active tasks
+   * Detect time jumps and backward scrubbing
    */
-  const spawnParticles = (deltaTime) => {
-    if (!isPlaying) return;
+  const handleTimeChange = (currentTime, previousTime) => {
+    const deltaTime = currentTime - previousTime;
 
-    const spawnRate = CONFIG.particlesPerSecond * deltaTime;
+    // Reset: currentTime jumped to 0 or large discontinuity
+    if (currentTime === 0 || Math.abs(deltaTime) > 1) {
+      particlesRef.current = [];
+      nextParticleIdRef.current = 0;
+      lastSpawnTimeRef.current = {};
+      return { reset: true, deltaTime: 0 };
+    }
 
-    Object.values(particlePaths).forEach(path => {
-      if (shouldSpawnParticle(path, currentTime) && Math.random() < spawnRate) {
-        particlesRef.current.push(
-          new Particle(nextParticleIdRef.current++, path, currentTime)
-        );
+    // Backward scrubbing: remove future particles
+    if (deltaTime < 0) {
+      particlesRef.current = particlesRef.current.filter(
+        p => p.spawnTime <= currentTime
+      );
+      // Reset spawn tracking for paths
+      Object.keys(lastSpawnTimeRef.current).forEach(pathId => {
+        if (lastSpawnTimeRef.current[pathId] > currentTime) {
+          lastSpawnTimeRef.current[pathId] = currentTime;
+        }
+      });
+    }
+
+    return { reset: false, deltaTime };
+  };
+
+  /**
+   * Spawn particles based on simulation time advancement
+   */
+  const spawnParticles = (currentTime, previousTime, deltaSimTime) => {
+    if (deltaSimTime <= 0) return;  // Don't spawn on pause or backward
+
+    Object.entries(particlePaths).forEach(([pathId, path]) => {
+      const lastSpawn = lastSpawnTimeRef.current[pathId] || 0;
+      const spawnInterval = 1 / CONFIG.particlesPerSecond;
+
+      // Spawn if enough simulation time has passed
+      if (currentTime - lastSpawn >= spawnInterval) {
+        if (shouldSpawnParticle(path, currentTime)) {
+          particlesRef.current.push(
+            new Particle(nextParticleIdRef.current++, path, currentTime)
+          );
+          lastSpawnTimeRef.current[pathId] = currentTime;
+        }
       }
     });
   };
@@ -150,11 +187,31 @@ function ParticleAnimationEngine({
   };
 
   /**
-   * Update all particles
+   * Update all particles using simulation time
    */
-  const updateParticles = (currentTime, deltaTime) => {
+  const updateParticles = (currentTime) => {
     particlesRef.current = particlesRef.current.filter(particle => {
-      particle.update(currentTime, deltaTime);
+      const age = currentTime - particle.spawnTime;
+
+      if (age >= CONFIG.particleLifetime) {
+        particle.active = false;
+        return false;
+      }
+
+      particle.progress = Math.min(1, age / CONFIG.particleLifetime);
+
+      // Fade out in last 20% of lifetime
+      if (particle.progress > 0.8) {
+        particle.opacity = (1 - particle.progress) / 0.2;
+      } else {
+        particle.opacity = 1;
+      }
+
+      if (particle.progress >= 1) {
+        particle.active = false;
+        return false;
+      }
+
       return particle.active;
     });
   };
@@ -167,30 +224,30 @@ function ParticleAnimationEngine({
   };
 
   /**
-   * Animation loop
+   * React to currentTime changes - drive particle spawning and updates
    */
-  const animate = (timestamp) => {
+  useEffect(() => {
+    const { reset, deltaTime } = handleTimeChange(currentTime, previousTimeRef.current);
+
+    if (!reset && deltaTime > 0 && isPlaying) {
+      spawnParticles(currentTime, previousTimeRef.current, deltaTime);
+    }
+
+    updateParticles(currentTime);
+    previousTimeRef.current = currentTime;
+  }, [currentTime, isPlaying]);
+
+  /**
+   * RAF loop for smooth rendering (no physics, just rendering)
+   */
+  const animate = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const deltaTime = lastTimeRef.current
-      ? (timestamp - lastTimeRef.current) / 1000 * playbackSpeed
-      : 0;
-
-    lastTimeRef.current = timestamp;
-
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Update and render
-    if (isPlaying) {
-      spawnParticles(deltaTime);
-      updateParticles(currentTime, deltaTime);
-    }
     renderParticles(ctx);
 
-    // Continue loop
     animationFrameRef.current = requestAnimationFrame(animate);
   };
 
@@ -220,17 +277,7 @@ function ParticleAnimationEngine({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [simulationData, currentTime, isPlaying, playbackSpeed, particlePaths]);
-
-  /**
-   * Reset particles when timeline resets
-   */
-  useEffect(() => {
-    if (currentTime === 0) {
-      particlesRef.current = [];
-      nextParticleIdRef.current = 0;
-    }
-  }, [currentTime]);
+  }, []);  // Only setup/teardown, no dependencies
 
   return (
     <canvas

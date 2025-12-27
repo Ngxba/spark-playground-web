@@ -616,10 +616,24 @@
   transition: all 0.3s ease;
 }
 
+.full-flow-stage.clickable {
+  cursor: pointer;
+}
+
+.full-flow-stage.clickable:hover {
+  border-color: #3b82f6;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
 .full-flow-stage.current {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
   transform: scale(1.05);
+}
+
+.full-flow-stage.current.clickable:hover {
+  transform: scale(1.05) translateY(-4px);
 }
 
 .full-flow-stage.completed {

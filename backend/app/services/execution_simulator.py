@@ -114,7 +114,8 @@ class ExecutionSimulator:
 
     def _parse_physical_plan(self, physical_plan: str) -> List[Dict[str, Any]]:
         """
-        Parse physical plan to extract stage information
+        Parse physical plan to extract stage information.
+        Stages are split on Exchange (shuffle) boundaries, matching real Spark behavior.
 
         Returns:
             List of stage info dictionaries
@@ -123,14 +124,14 @@ class ExecutionSimulator:
 
         # Common Spark physical plan operations
         operations = [
-            ("Scan", r"FileScan|Scan"),
+            ("Scan", r"FileScan|Scan|ExistingRDD"),
             ("Filter", r"Filter"),
             ("Project", r"Project"),
             ("HashAggregate", r"HashAggregate"),
             ("SortMergeJoin", r"SortMergeJoin"),
             ("BroadcastHashJoin", r"BroadcastHashJoin"),
             ("Sort", r"Sort"),
-            ("Exchange", r"Exchange"),
+            ("Exchange", r"Exchange(?!.*Broadcast)"),  # Match Exchange but not BroadcastExchange
             ("BroadcastExchange", r"BroadcastExchange"),
         ]
 
@@ -143,30 +144,41 @@ class ExecutionSimulator:
 
         lines = physical_plan.split('\n')
         for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
             # Check for each operation type
             for op_name, op_pattern in operations:
                 if re.search(op_pattern, line):
-                    current_stage["operations"].append(op_name)
-
-                    if op_name == "Exchange":
+                    # Exchange marks a stage boundary - finalize current stage and start new one
+                    if op_name == "Exchange" and current_stage["operations"]:
+                        # Add Exchange to current stage to show it produces a shuffle
+                        current_stage["operations"].append(op_name)
                         current_stage["has_shuffle"] = True
-                    elif op_name == "BroadcastExchange":
-                        current_stage["has_broadcast"] = True
 
-        # Create stage name from operations
+                        # Finalize current stage
+                        self._finalize_stage(current_stage, stages_info)
+
+                        # Start new stage after the shuffle
+                        current_stage = {
+                            "id": len(stages_info),
+                            "operations": [],
+                            "has_shuffle": False,
+                            "has_broadcast": False,
+                        }
+                    else:
+                        # Regular operation - add to current stage
+                        current_stage["operations"].append(op_name)
+
+                        if op_name == "BroadcastExchange":
+                            current_stage["has_broadcast"] = True
+
+                    break  # Only match first pattern per line
+
+        # Finalize the last stage
         if current_stage["operations"]:
-            # Remove duplicates while preserving order
-            unique_ops = []
-            seen = set()
-            for op in current_stage["operations"]:
-                if op not in seen:
-                    unique_ops.append(op)
-                    seen.add(op)
-
-            current_stage["name"] = " + ".join(unique_ops[:3])  # Limit to 3 ops
-            if len(unique_ops) > 3:
-                current_stage["name"] += "..."
-            stages_info.append(current_stage)
+            self._finalize_stage(current_stage, stages_info)
 
         # If no operations detected, create a default stage
         if not stages_info:
@@ -179,6 +191,28 @@ class ExecutionSimulator:
             })
 
         return stages_info
+
+    def _finalize_stage(self, stage: Dict[str, Any], stages_list: List[Dict[str, Any]]) -> None:
+        """Helper to finalize a stage and add it to the list"""
+        # Remove duplicates while preserving order
+        unique_ops = []
+        seen = set()
+        for op in stage["operations"]:
+            if op not in seen:
+                unique_ops.append(op)
+                seen.add(op)
+
+        # Create stage name from operations
+        # Exclude Exchange from the name as it's a boundary, not the main operation
+        display_ops = [op for op in unique_ops if op != "Exchange"]
+        if display_ops:
+            stage["name"] = " + ".join(display_ops[:3])  # Limit to 3 ops
+            if len(display_ops) > 3:
+                stage["name"] += "..."
+        else:
+            stage["name"] = "Exchange"
+
+        stages_list.append(stage)
 
     def _estimate_partition_count(
         self,

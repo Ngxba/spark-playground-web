@@ -36,7 +36,7 @@ function ClusterView({ nodes, currentState }) {
 
   return (
     <div className="cluster-view">
-      <h4 className="cluster-title">Cluster: {nodes.length} Worker Nodes</h4>
+      <h4 className="cluster-title">[A3.1] 💻 Cluster: {nodes.length} Worker Nodes</h4>
       <div className="nodes-container">
         {nodes.map(node => {
           const nodeStats = currentState?.tasksByNode[node.id] || { active: [], completed: 0 };

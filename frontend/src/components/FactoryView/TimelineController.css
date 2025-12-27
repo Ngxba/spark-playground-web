@@ -1,171 +1,415 @@
 .timeline-controller {
   background: white;
   border-bottom: 1px solid #e5e7eb;
-  padding: 16px 20px;
+  padding: 16px 24px 20px;
 }
 
-.controls-top {
+/* Header with time display */
+.timeline-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 24px;
   margin-bottom: 16px;
+  padding: 0 4px;
 }
 
-.playback-controls {
+.time-display {
   display: flex;
-  gap: 8px;
-}
-
-.control-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 8px;
-  background: #667eea;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.control-btn:hover {
-  background: #5568d3;
-  transform: scale(1.05);
-}
-
-.control-btn:active {
-  transform: scale(0.95);
-}
-
-.reset-btn {
-  background: #6b7280;
-}
-
-.reset-btn:hover {
-  background: #4b5563;
-}
-
-.speed-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.speed-label {
+  align-items: baseline;
+  gap: 6px;
   font-size: 14px;
+}
+
+.time-label {
   color: #6b7280;
   font-weight: 500;
 }
 
-.speed-btn {
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: white;
-  color: #6b7280;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.speed-btn:hover {
-  border-color: #667eea;
-  color: #667eea;
-}
-
-.speed-btn.active {
-  background: #667eea;
-  border-color: #667eea;
-  color: white;
-}
-
-.time-display {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  color: #374151;
-}
-
-.current-time {
-  font-weight: 600;
-  color: #667eea;
+.time-value {
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 16px;
+  min-width: 60px;
 }
 
 .time-separator {
   color: #9ca3af;
+  margin: 0 2px;
 }
 
-.total-time {
+.time-total {
   color: #6b7280;
+  font-weight: 500;
 }
 
+.current-stage-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.stage-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stage-name {
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Timeline Scrubber Container */
 .timeline-scrubber {
   position: relative;
+  padding: 0 60px 40px 60px;
+}
+
+/* Markers Row - Above Timeline */
+.timeline-markers-row {
+  position: relative;
+  display: flex;
+  height: 48px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.marker-connector {
+  width: 2px;
+  height: 12px;
+  background: #d1d5db;
+  transition: all 0.2s;
+}
+
+/* Stage Markers */
+.stage-marker {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform: translateX(-50%);
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.stage-marker-label {
+  background: #e0e7ff;
+  color: #4f46e5;
+  border: 2px solid #818cf8;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+  transition: all 0.2s;
+  min-width: 44px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stage-marker:hover .stage-marker-label {
+  background: #c7d2fe;
+  border-color: #6366f1;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.stage-marker-selected .stage-marker-label {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(59, 130, 246, 0.4);
+  transform: scale(1.1);
+}
+
+.stage-marker-selected:hover .stage-marker-label {
+  transform: translateY(-2px) scale(1.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(59, 130, 246, 0.5);
+}
+
+.stage-marker .marker-connector {
+  background: #818cf8;
+}
+
+.stage-marker-selected .marker-connector {
+  background: #3b82f6;
+  height: 14px;
+}
+
+.stage-marker:hover .marker-connector {
+  background: #6366f1;
+  height: 14px;
+}
+
+/* End Marker */
+.timeline-end-marker {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform: translateX(-50%);
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 5;
+}
+
+.end-marker-label {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+  transition: all 0.2s;
+  min-width: 44px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-end-marker:hover .end-marker-label {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-end-marker.end-marker-active .end-marker-label {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: #10b981;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.4);
+  transform: scale(1.1);
+}
+
+.timeline-end-marker.end-marker-active:hover .end-marker-label {
+  transform: translateY(-2px) scale(1.15);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4), 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+.timeline-end-marker .marker-connector {
+  background: #d1d5db;
+}
+
+.timeline-end-marker:hover .marker-connector {
+  background: #9ca3af;
+  height: 14px;
+}
+
+.timeline-end-marker.end-marker-active .marker-connector {
+  background: #10b981;
+  height: 14px;
+}
+
+/* Timeline Track Container */
+.timeline-track-container {
+  position: relative;
+  padding: 0 0 0 0;
+  margin-bottom: 8px;
 }
 
 .timeline-track {
   position: relative;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
+  height: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
   overflow: visible;
+  margin: 0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Stage Segments */
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+
+.timeline-segment.segment-active {
+  opacity: 0.8;
+  background: #dbeafe;
+}
+
+.timeline-segment.segment-selected {
+  opacity: 1;
+  background: #bfdbfe;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+/* Progress Bar */
 .timeline-progress {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  border-radius: 6px;
   transition: width 0.1s linear;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  z-index: 2;
 }
 
-.timeline-input {
+/* Track Boundary Markers */
+.track-boundary-marker {
   position: absolute;
-  top: -4px;
-  left: 0;
-  width: 100%;
+  top: -2px;
+  width: 3px;
   height: 16px;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 10;
+  background: #9ca3af;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 3;
+  transition: all 0.2s;
 }
 
+.track-boundary-marker.boundary-active {
+  background: #3b82f6;
+  width: 4px;
+  height: 18px;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
+}
+
+/* Event Markers on Track */
 .timeline-marker {
   position: absolute;
   top: -2px;
   width: 4px;
-  height: 12px;
+  height: 16px;
   border-radius: 2px;
   transform: translateX(-50%);
   pointer-events: none;
+  z-index: 4;
 }
 
 .marker-stage {
   background: #3b82f6;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
 }
 
 .marker-shuffle {
   background: #ef4444;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+  width: 5px;
+  height: 18px;
 }
 
-/* Responsive */
+/* Bookmarks Row */
+.timeline-bookmarks {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  pointer-events: none;
+}
+
+.timeline-bookmark {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 10px;
+  cursor: default;
+  pointer-events: auto;
+  transition: all 0.2s;
+  opacity: 0.85;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.timeline-bookmark:hover {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.bookmark-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.bookmark-label {
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.bookmark-shuffle {
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.bookmark-shuffle .bookmark-label {
+  color: #92400e;
+}
+
+.bookmark-stage {
+  border-color: #818cf8;
+  background: #e0e7ff;
+}
+
+.bookmark-stage .bookmark-label {
+  color: #4f46e5;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-  .controls-top {
-    flex-wrap: wrap;
-    gap: 12px;
+  .timeline-controller {
+    padding: 12px 16px 16px;
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .time-display {
-    margin-left: 0;
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+  }
+
+  .current-stage-info {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .timeline-scrubber {
+    padding: 0 40px 40px 40px;
+  }
+
+  .timeline-markers-row {
+    height: 56px;
+    margin-bottom: 10px;
+  }
+
+  .stage-marker-label {
+    font-size: 10px;
+    padding: 5px 10px;
+    min-width: 40px;
   }
 }

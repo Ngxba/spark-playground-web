@@ -13,8 +13,21 @@ import './StageFlowView.css';
  * Allows users to navigate through Spark execution stages one at a time,
  * with educational explanations and data flow visualization.
  */
-function StageFlowView({ stageFlowData }) {
-  const [currentStageIndex, setCurrentStageIndex] = useState(0);
+function StageFlowView({ stageFlowData, selectedStageIndex: externalSelectedStageIndex, onStageSelect }) {
+  const [internalStageIndex, setInternalStageIndex] = useState(0);
+
+  // Use external stage index if provided, otherwise use internal state
+  const currentStageIndex = externalSelectedStageIndex !== undefined
+    ? externalSelectedStageIndex
+    : internalStageIndex;
+
+  const handleStageIndexChange = (index) => {
+    if (onStageSelect) {
+      onStageSelect(index);
+    } else {
+      setInternalStageIndex(index);
+    }
+  };
 
   // If no stage flow data, show message
   if (!stageFlowData || !stageFlowData.stages || stageFlowData.stages.length === 0) {
@@ -38,27 +51,27 @@ function StageFlowView({ stageFlowData }) {
 
   const handlePrevious = () => {
     if (currentStageIndex > 0) {
-      setCurrentStageIndex(currentStageIndex - 1);
+      handleStageIndexChange(currentStageIndex - 1);
     }
   };
 
   const handleNext = () => {
     if (currentStageIndex < stages.length - 1) {
-      setCurrentStageIndex(currentStageIndex + 1);
+      handleStageIndexChange(currentStageIndex + 1);
     }
   };
 
   const handleStageSelect = (index) => {
     if (index >= 0 && index < stages.length) {
-      setCurrentStageIndex(index);
+      handleStageIndexChange(index);
     }
   };
 
   return (
     <div className="stage-flow-view">
-      {/* Header with overall explanation */}
+      {/* [A5.1] Header with overall explanation */}
       <div className="stage-flow-header">
-        <h2>Stage-by-Stage Execution</h2>
+        <h2>[A5] Stage-by-Stage Execution</h2>
         <p className="overall-explanation">{explanation}</p>
         {shuffleCount > 0 && (
           <div className="shuffle-warning">
@@ -67,39 +80,40 @@ function StageFlowView({ stageFlowData }) {
         )}
       </div>
 
-      {/* Stage Navigator Timeline */}
+      {/* [A5.2] Stage Navigator Timeline */}
       <StageNavigator
         stages={stages}
         currentStageIndex={currentStageIndex}
         onStageSelect={handleStageSelect}
       />
 
-      {/* Full Pipeline Visualization */}
+      {/* [A5.3] Full Pipeline Visualization (Execution Pipeline) */}
       <FullDataFlowVisualization
         stages={stages}
         currentStageIndex={currentStageIndex}
+        onStageClick={handleStageSelect}
       />
 
-      {/* Current Stage Details */}
+      {/* [A5.4] Current Stage Details */}
       <StageDetailsPanel
         stage={currentStage}
         stageIndex={currentStageIndex}
         totalStages={stages.length}
       />
 
-      {/* Data Flow Visualization */}
+      {/* [A5.5] Data Flow Visualization */}
       <DataFlowVisualization
         stage={currentStage}
         previousStage={previousStage}
       />
 
-      {/* Stage Explanation */}
+      {/* [A5.6] Stage Explanation */}
       <StageExplanationPanel
         explanation={currentStage.explanation}
         performanceNote={currentStage.performanceNote}
       />
 
-      {/* Navigation Controls */}
+      {/* [A5.7] Navigation Controls */}
       <NavigationControls
         currentIndex={currentStageIndex}
         totalStages={stages.length}

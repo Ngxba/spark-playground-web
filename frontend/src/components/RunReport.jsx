@@ -6,6 +6,7 @@ import ProgressiveHints from './ProgressiveHints';
 import QueryPlanViewer from './QueryPlanViewer';
 import FactoryView from './FactoryView/FactoryView';
 import ClusterOverview from './ClusterOverview';
+import ConceptPanel from './FactoryView/ConceptPanel';
 import './RunReport.css';
 
 function RunReport({ result, onClose }) {
@@ -81,6 +82,12 @@ function RunReport({ result, onClose }) {
             onClick={() => setActiveTab('query-plan')}
           >
             Query Plan
+          </button>
+          <button
+            className={`report-tab ${activeTab === 'concepts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('concepts')}
+          >
+            💡 Learn Concepts
           </button>
           <button
             className={`report-tab ${activeTab === 'hints' ? 'active' : ''}`}
@@ -213,6 +220,13 @@ function RunReport({ result, onClose }) {
               dagStructure={result.dag_structure}
               physicalPlan={result.physical_plan}
               logicalPlan={result.logical_plan}
+            />
+          )}
+
+          {activeTab === 'concepts' && (
+            <ConceptPanel
+              currentState={null}
+              simulationData={result.execution_simulation}
             />
           )}
 

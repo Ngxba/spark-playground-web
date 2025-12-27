@@ -5,7 +5,7 @@ import './StageFlowView.css';
  *
  * Shows all stages connected in a single view with data flow between them.
  */
-function FullDataFlowVisualization({ stages, currentStageIndex }) {
+function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) {
   const getStageColor = (stageType) => {
     const colors = {
       scan: '#10b981',      // Green
@@ -59,7 +59,11 @@ function FullDataFlowVisualization({ stages, currentStageIndex }) {
     return (
       <div key={stage.id} className="full-flow-stage-group">
         {/* Stage Box */}
-        <div className={`full-flow-stage ${isCurrent ? 'current' : ''} ${isPast ? 'completed' : ''}`}>
+        <div
+          className={`full-flow-stage ${isCurrent ? 'current' : ''} ${isPast ? 'completed' : ''} ${onStageClick ? 'clickable' : ''}`}
+          onClick={() => onStageClick && onStageClick(index)}
+          title={onStageClick ? `Click to view Stage ${index + 1} details` : ''}
+        >
           <div
             className="full-flow-stage-header"
             style={{ backgroundColor: stageColor }}
@@ -121,7 +125,7 @@ function FullDataFlowVisualization({ stages, currentStageIndex }) {
 
   return (
     <div className="full-data-flow-visualization">
-      <h4>📊 Complete Data Flow Pipeline</h4>
+      <h4>[A6.3] 📊 Complete Data Flow Pipeline</h4>
       <div className="full-flow-container">
         {stages.map((stage, index) =>
           renderStageConnection(stage, index, stages[index + 1])
