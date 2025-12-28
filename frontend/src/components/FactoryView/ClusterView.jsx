@@ -3,15 +3,31 @@ import './ClusterView.css';
 /**
  * ClusterView - Visualizes the cluster nodes and task execution
  */
-function ClusterView({ nodes, currentState }) {
+function ClusterView({ nodes, currentState, stages }) {
   if (!nodes || nodes.length === 0) {
     return null;
   }
 
-  const renderCores = (node) => {
-    const cores = [];
+  const renderCoresWithQueue = (node) => {
     const activeTasks = currentState?.tasksByNode[node.id]?.active || [];
+    const completedTaskIds = currentState?.completedTasks?.map(t => t.id) || [];
 
+    // Calculate queued tasks for this node from all stages
+    let queuedTasks = [];
+    if (stages) {
+      stages.forEach(stage => {
+        const nodeTasks = stage.tasks.filter(task => task.node_id === node.id);
+        nodeTasks.forEach(task => {
+          // Task is queued if it's not active and not completed
+          if (!activeTasks.some(at => at.id === task.id) && !completedTaskIds.includes(task.id)) {
+            queuedTasks.push(task);
+          }
+        });
+      });
+    }
+
+    // Render cores
+    const cores = [];
     for (let i = 0; i < node.cores; i++) {
       const task = activeTasks[i];
       const isActive = !!task;
@@ -24,6 +40,7 @@ function ClusterView({ nodes, currentState }) {
         >
           {isActive && (
             <div className="core-task-indicator">
+              <div className="core-task-id">P{task.partition_id}</div>
               <div className="task-spinner" />
             </div>
           )}
@@ -31,7 +48,29 @@ function ClusterView({ nodes, currentState }) {
       );
     }
 
-    return cores;
+    // Show queue if there are waiting tasks
+    if (queuedTasks.length > 0) {
+      return (
+        <div className="cores-with-queue">
+          <div className="node-cores">{cores}</div>
+          <div className="task-queue">
+            <div className="queue-label">Queue ({queuedTasks.length} waiting)</div>
+            <div className="queue-items">
+              {queuedTasks.slice(0, 4).map(task => (
+                <div key={task.id} className="queue-item" title={`Partition ${task.partition_id} waiting`}>
+                  P{task.partition_id}
+                </div>
+              ))}
+              {queuedTasks.length > 4 && (
+                <div className="queue-more">+{queuedTasks.length - 4} more</div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return <div className="node-cores">{cores}</div>;
   };
 
   return (
@@ -51,9 +90,7 @@ function ClusterView({ nodes, currentState }) {
                 </span>
               </div>
 
-              <div className="node-cores">
-                {renderCores(node)}
-              </div>
+              {renderCoresWithQueue(node)}
 
               <div className="node-stats">
                 <div className="stat">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './ExecutionDiagram.css';
+import ExecutionRoundsView from './ExecutionRoundsView';
 
 /**
  * ExecutionDiagram - Detailed visualization showing:
@@ -370,6 +371,15 @@ function ExecutionDiagram({
           );
         })}
       </div>
+
+      {/* [A2.5] Execution Rounds Analysis */}
+      {viewMode === 'single' && (
+        <ExecutionRoundsView
+          stage={stages[selectedStageIndex]}
+          nodes={nodes}
+          currentState={currentState}
+        />
+      )}
 
       {/* [A2.4] Executor Summary */}
       <div className="executor-summary">

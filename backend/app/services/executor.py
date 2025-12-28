@@ -29,7 +29,7 @@ class CodeExecutor:
         event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR", "/tmp/spark-events")
 
         spark = (SparkSession.builder
-                .master("local[*]")  # Use all available cores
+                .master("local[2]")  # Use 2 cores for testing
                 .appName(app_name)
                 .config("spark.sql.shuffle.partitions", "4")  # Smaller for local testing
                 .config("spark.driver.memory", "2g")

@@ -153,6 +153,7 @@ function FactoryView({ simulationData }) {
         <ClusterView
           nodes={nodes}
           currentState={currentState}
+          stages={stages}
         />
 
         {/* [A3.2] Stage Flow - Shows stages and their progress */}

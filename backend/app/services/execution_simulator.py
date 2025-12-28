@@ -21,11 +21,12 @@ class ExecutionSimulator:
     """
 
     def __init__(self):
-        # Cluster configuration
-        self.node_count = 4
-        self.cores_per_node = 4
-        self.total_cores = self.node_count * self.cores_per_node
-        self.memory_per_node_gb = 4.0
+        # Default cluster configuration (will be overridden by actual config)
+        self.node_count = 1  # In local mode, just 1 executor (driver)
+        self.cores_per_node = 4  # Will be set from actual cluster config
+        self.total_cores = 4
+        self.memory_per_node_gb = 2.0
+        self.is_local_mode = True  # Will be determined from cluster config
 
         # Timing parameters (simulated, in seconds)
         self.base_task_duration = 0.5
@@ -34,6 +35,40 @@ class ExecutionSimulator:
         self.filter_duration = 0.1
         self.join_duration = 0.4
         self.aggregate_duration = 0.3
+
+    def _configure_from_cluster(self, execution_metadata: Optional[Dict[str, Any]]):
+        """
+        Configure simulator based on actual cluster configuration from Spark
+
+        In local mode: 1 executor (driver) with N cores
+        In cluster mode: M executors across worker nodes
+        """
+        if not execution_metadata or 'cluster_config' not in execution_metadata:
+            return
+
+        cluster_config = execution_metadata['cluster_config']
+
+        # Check if running in local mode
+        mode = cluster_config.get('mode', 'local[*]')
+        self.is_local_mode = 'local' in mode.lower()
+
+        if self.is_local_mode:
+            # In local mode: 1 executor (the driver) with all cores
+            executors = cluster_config.get('executors', [])
+            if executors:
+                driver_executor = executors[0]
+                self.node_count = 1  # Just the driver
+                self.cores_per_node = driver_executor.get('cores', 4)
+                self.total_cores = self.cores_per_node
+                self.memory_per_node_gb = driver_executor.get('memory_mb', 2048) / 1024.0
+        else:
+            # In cluster mode: multiple executors
+            executors = cluster_config.get('executors', [])
+            self.node_count = len(executors) if executors else 1
+            if executors:
+                self.cores_per_node = executors[0].get('cores', 4)
+                self.memory_per_node_gb = executors[0].get('memory_mb', 2048) / 1024.0
+            self.total_cores = sum(e.get('cores', 4) for e in executors) if executors else 4
 
     def generate_simulation(
         self,
@@ -56,6 +91,9 @@ class ExecutionSimulator:
             return None
 
         try:
+            # Configure simulator based on actual cluster config
+            self._configure_from_cluster(execution_metadata)
+
             # Parse physical plan to extract stages
             stages_info = self._parse_physical_plan(physical_plan)
 
@@ -223,12 +261,24 @@ class ExecutionSimulator:
         return self._extract_initial_partition_count(physical_plan, execution_metadata)
 
     def _generate_nodes(self) -> List[Node]:
-        """Generate worker nodes"""
+        """
+        Generate execution nodes based on cluster mode
+
+        In local mode: 1 node representing the driver executor
+        In cluster mode: Multiple nodes representing worker machines
+        """
         nodes = []
         for i in range(self.node_count):
+            if self.is_local_mode:
+                # In local mode, this represents the driver executor
+                node_name = "Driver (Local Executor)"
+            else:
+                # In cluster mode, these are actual worker nodes
+                node_name = f"Worker {i + 1}"
+
             nodes.append(Node(
                 id=i,
-                name=f"Worker {i + 1}",
+                name=node_name,
                 cores=self.cores_per_node,
                 memory_gb=self.memory_per_node_gb,
                 assigned_tasks=[]

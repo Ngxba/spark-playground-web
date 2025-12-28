@@ -45,7 +45,7 @@ function ClusterOverview({ clusterConfig }) {
           <div className="summary-item">
             <div className="summary-icon">🖥️</div>
             <div className="summary-content">
-              <div className="summary-label">Executors</div>
+              <div className="summary-label">Node(s)</div>
               <div className="summary-value">{cluster_summary?.total_executors || 1}</div>
             </div>
           </div>
