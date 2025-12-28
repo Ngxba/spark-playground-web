@@ -216,14 +216,30 @@ class OperationDetector:
             if not operation_line:
                 continue
 
-            # Extract operation name before parentheses or brackets
-            operation = operation_line.split('(')[0].split('[')[0].strip()
+            # Extract operation name (first word before space, parentheses, or brackets)
+            operation = operation_line.split('(')[0].split('[')[0].split()[0].strip() if operation_line.split('(')[0].split('[')[0].split() else operation_line.split('(')[0].split('[')[0].strip()
+
+            # Skip Spark internal wrapper operations (not meaningful for learners)
+            if operation in ['AdaptiveSparkPlan', 'WholeStageCodegen']:
+                continue
 
             # Extract details from parentheses/brackets
+            # Handle nested parentheses by finding matching closing bracket
             details = None
             if '(' in operation_line:
                 details_start = operation_line.find('(')
-                details_end = operation_line.find(')', details_start)
+                # Find matching closing parenthesis (handle nested parens)
+                paren_count = 0
+                details_end = -1
+                for i in range(details_start, len(operation_line)):
+                    if operation_line[i] == '(':
+                        paren_count += 1
+                    elif operation_line[i] == ')':
+                        paren_count -= 1
+                        if paren_count == 0:
+                            details_end = i
+                            break
+
                 if details_end > details_start:
                     details = operation_line[details_start+1:details_end]
             elif '[' in operation_line:
@@ -240,7 +256,7 @@ class OperationDetector:
             node = {
                 'id': node_id,
                 'operation': operation,
-                'details': details[:50] if details else None,  # Limit details length
+                'details': details if details else None,
                 'depth': depth,
                 'label': operation
             }
@@ -286,9 +302,10 @@ class OperationDetector:
 
         Removes internal attribute IDs and makes details more readable.
         Examples:
+        - 'keys=[type], functions=[sum(quantity)], output=[type, quantity]' -> 'sum(quantity) → type, quantity'
         - 'color#152,id#153L,type#154' -> 'Columns: color, id, type'
         - 'type#154 ASC NULLS FIRST' -> 'Sort by: type (ascending)'
-        - 'type#154 ASC NULLS FIRST, 4' -> 'Sort by: type (ascending), 4 partitions'
+        - 'type, 4' -> 'type, 4 partitions'
         """
         import re
 
@@ -298,14 +315,55 @@ class OperationDetector:
         # Remove attribute IDs (e.g., #152, #153L)
         cleaned = re.sub(r'#\d+L?', '', details)
 
+        # Handle HashAggregate operations (keys=[...], functions=[...], output=[...])
+        if 'keys=' in cleaned and 'functions=' in cleaned and 'output=' in cleaned:
+            try:
+                # Extract keys
+                keys_match = re.search(r'keys=\[([^\]]+)\]', cleaned)
+                keys = keys_match.group(1).strip() if keys_match else ''
+
+                # Extract functions
+                functions_match = re.search(r'functions=\[([^\]]+)\]', cleaned)
+                functions = functions_match.group(1).strip() if functions_match else ''
+
+                # Extract output
+                output_match = re.search(r'output=\[([^\]]+)\]', cleaned)
+                output = output_match.group(1).strip() if output_match else ''
+
+                # Clean up the extracted parts
+                keys = ', '.join([k.strip() for k in keys.split(',') if k.strip()])
+                functions = ', '.join([f.strip() for f in functions.split(',') if f.strip()])
+                output = ', '.join([o.strip() for o in output.split(',') if o.strip()])
+
+                # Format: "function(s) → output columns"
+                if functions and output:
+                    return f"{functions} → {output}"
+                elif functions:
+                    return f"{functions}"
+                elif keys and output:
+                    return f"keys: {keys} → {output}"
+                else:
+                    return cleaned
+            except:
+                pass
+
+        # Handle Exchange operations with partition count (e.g., "type, 4")
+        if 'partitioning' not in cleaned.lower() and re.search(r',\s*\d+$', cleaned):
+            # Extract partition count at the end
+            parts = cleaned.rsplit(',', 1)
+            if len(parts) == 2 and parts[1].strip().isdigit():
+                columns = parts[0].strip()
+                partition_count = parts[1].strip()
+                return f"{columns}, {partition_count} partitions"
+
         # Handle column lists (e.g., "color,id,type")
-        if ',' in cleaned and 'ASC' not in cleaned and 'DESC' not in cleaned:
+        if ',' in cleaned and 'ASC' not in cleaned and 'DESC' not in cleaned and '→' not in cleaned:
             # Split and clean up column names
             columns = [col.strip() for col in cleaned.split(',')]
             # Remove empty strings and deduplicate
-            columns = [col for col in columns if col]
+            columns = [col for col in columns if col and not col.isdigit()]
             if columns:
-                return f"Columns: {', '.join(columns)}"
+                return ', '.join(columns)
 
         # Handle sort operations
         if 'ASC' in cleaned or 'DESC' in cleaned:

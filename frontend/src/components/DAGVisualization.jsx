@@ -62,20 +62,28 @@ function DAGVisualization({ nodes, edges }) {
     });
 
     // Calculate positions in a left-to-right hierarchical layout (like Airflow)
+    // First pass: determine max depth for centering
+    const maxDepth = Math.max(...nodes.map(n => n.depth || 0));
+
     return nodes.map((node) => {
       const depth = node.depth || 0;
       const nodesAtDepth = nodesByDepth[depth];
       const indexAtDepth = nodesAtDepth.indexOf(node);
       const totalAtDepth = nodesAtDepth.length;
 
-      // Horizontal position based on depth (left to right flow)
-      const x = 100 + depth * 300;
+      // Horizontal position: evenly space across available width
+      // Use larger spacing for better readability
+      const horizontalSpacing = 350;
+      const x = 50 + depth * horizontalSpacing;
 
       // Vertical position: center nodes at same depth
       const verticalSpacing = 150;
-      const totalHeight = totalAtDepth * verticalSpacing;
-      const startY = 50;
-      const y = startY + indexAtDepth * verticalSpacing + (totalAtDepth > 1 ? 0 : totalHeight / 2);
+      const canvasHeight = 400; // Approximate canvas height
+
+      // Calculate starting Y to center the group of nodes at this depth
+      const groupHeight = (totalAtDepth - 1) * verticalSpacing;
+      const startY = (canvasHeight - groupHeight) / 2;
+      const y = startY + indexAtDepth * verticalSpacing;
 
       return {
         id: String(node.id),
