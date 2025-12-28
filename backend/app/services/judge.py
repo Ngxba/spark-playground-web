@@ -44,6 +44,7 @@ class Judge:
             return RunResult(
                 correct=False,
                 output=None,
+                user_code=code,
                 metrics=MetricsResult(
                     time_simulated=0.0,
                     shuffles=0,
@@ -131,6 +132,7 @@ class Judge:
         return RunResult(
             correct=is_correct,
             output=result,
+            user_code=code,
             metrics=metrics,
             stars=stars,
             hint=hint,

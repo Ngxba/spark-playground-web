@@ -135,6 +135,14 @@ function ReportPage() {
         <div className="report-page-main">
           {activeTab === 'overview' && (
             <>
+              {/* User Code Section */}
+              {result.user_code && (
+                <div className="report-section code-section">
+                  <h4>📝 Your Code</h4>
+                  <pre className="code-display">{result.user_code}</pre>
+                </div>
+              )}
+
               {/* Error message */}
               {result.error && (
                 <div className="report-section error-section">

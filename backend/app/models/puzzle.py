@@ -37,6 +37,7 @@ class RunResult(BaseModel):
     """Result of code execution"""
     correct: bool = Field(description="Whether output matches expected result")
     output: Optional[Any] = Field(description="Actual output from code execution")
+    user_code: Optional[str] = Field(default=None, description="The user code that was executed")
     metrics: MetricsResult
     stars: int = Field(ge=0, le=3, description="Star rating (0-3)")
     hint: Optional[str] = Field(default=None, description="Hint for improvement")
