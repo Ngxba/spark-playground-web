@@ -1,0 +1,89 @@
+.run-history {
+  padding: 20px;
+}
+
+.run-history-header {
+  margin-bottom: 20px;
+}
+
+.run-history-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+}
+
+.run-count {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.run-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.run-history-table th {
+  background: #f5f5f5;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  color: #333;
+}
+
+.run-history-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.run-history-table tr.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.run-history-table tr.clickable:hover {
+  background: #f9f9f9;
+}
+
+.run-history-table td.success {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.run-history-table td.error {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.empty-state h3 {
+  margin: 0 0 12px 0;
+  color: #333;
+}
+
+.error-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #ef4444;
+}
+
+.error-message button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.error-message button:hover {
+  background: #2563eb;
+}

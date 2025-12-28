@@ -15,6 +15,25 @@ services:
       timeout: 10s
       retries: 3
 
+  postgres:
+    image: postgres:15
+    container_name: spark_playground_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: spark_playground
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - spark-playground-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: spark-playground-backend
@@ -22,12 +41,16 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
+      - ./backend/.env:/app/.env
       - spark-events:/tmp/spark-events
     environment:
       - PYTHONUNBUFFERED=1
       - SPARK_EVENT_LOG_DIR=/tmp/spark-events
     depends_on:
-      - spark-history
+      postgres:
+        condition: service_healthy
+      spark-history:
+        condition: service_started
     networks:
       - spark-playground-network
 
@@ -52,3 +75,4 @@ networks:
 
 volumes:
   spark-events:
+  postgres_data:

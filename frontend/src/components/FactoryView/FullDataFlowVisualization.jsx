@@ -1,9 +1,9 @@
 import './StageFlowView.css';
 
 /**
- * FullDataFlowVisualization - Complete pipeline visualization showing all stages
+ * FullDataFlowVisualization - Complete pipeline visualization showing all steps
  *
- * Shows all stages connected in a single view with data flow between them.
+ * Shows all steps connected in a single view with data flow between them.
  */
 function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) {
   const getStageColor = (stageType) => {
@@ -62,7 +62,7 @@ function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) 
         <div
           className={`full-flow-stage ${isCurrent ? 'current' : ''} ${isPast ? 'completed' : ''} ${onStageClick ? 'clickable' : ''}`}
           onClick={() => onStageClick && onStageClick(index)}
-          title={onStageClick ? `Click to view Stage ${index + 1} details` : ''}
+          title={onStageClick ? `Click to view Step ${index + 1} details` : ''}
         >
           <div
             className="full-flow-stage-header"
@@ -70,7 +70,7 @@ function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) 
           >
             <span className="full-flow-stage-icon">{getStageIcon(stage.name)}</span>
             <div className="full-flow-stage-info">
-              <div className="full-flow-stage-number">Stage {index + 1}</div>
+              <div className="full-flow-stage-number">Step {index + 1}</div>
               <div className="full-flow-stage-name">{stage.name}</div>
             </div>
           </div>

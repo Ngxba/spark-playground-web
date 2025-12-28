@@ -1,10 +1,10 @@
 import './StageFlowView.css';
 
 /**
- * StageNavigator - Timeline showing all stages with click navigation
+ * StageNavigator - Timeline showing all steps with click navigation
  *
- * Displays a horizontal timeline of all stages with visual indicators
- * for stage types and allows clicking to jump to any stage.
+ * Displays a horizontal timeline of all steps with visual indicators
+ * for step types and allows clicking to jump to any step.
  */
 function StageNavigator({ stages, currentStageIndex, onStageSelect }) {
   const getStageColor = (stageType) => {
@@ -52,7 +52,7 @@ function StageNavigator({ stages, currentStageIndex, onStageSelect }) {
 
               {/* Stage Label */}
               <div className="stage-label">
-                <div className="stage-number">Stage {index + 1}</div>
+                <div className="stage-number">Step {index + 1}</div>
                 <div className="stage-name" title={stage.name}>{stage.name}</div>
               </div>
             </div>

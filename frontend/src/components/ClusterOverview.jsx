@@ -16,7 +16,7 @@ function ClusterOverview({ clusterConfig }) {
     );
   }
 
-  const { mode, driver_memory, executor_memory, shuffle_partitions, total_cores, executors, cluster_summary } = clusterConfig;
+  const { mode, driver_memory, executor_memory, shuffle_partitions, runtime_partitions, total_cores, executors, cluster_summary } = clusterConfig;
 
   const formatMemory = (memoryMb) => {
     if (memoryMb >= 1024) {
@@ -71,8 +71,16 @@ function ClusterOverview({ clusterConfig }) {
           <div className="summary-item">
             <div className="summary-icon">🔀</div>
             <div className="summary-content">
-              <div className="summary-label">Shuffle Partitions</div>
+              <div className="summary-label">Shuffle Partitions (Config)</div>
               <div className="summary-value">{shuffle_partitions}</div>
+            </div>
+          </div>
+
+          <div className="summary-item">
+            <div className="summary-icon">📦</div>
+            <div className="summary-content">
+              <div className="summary-label">Runtime Partitions</div>
+              <div className="summary-value">{runtime_partitions || shuffle_partitions}</div>
             </div>
           </div>
         </div>

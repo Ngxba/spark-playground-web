@@ -3,7 +3,6 @@ import TimelineController from './TimelineController';
 import ClusterView from './ClusterView';
 import StageFlow from './StageFlow';
 import LiveMetrics from './LiveMetrics';
-import StageFlowView from './StageFlowView';
 // import ParticleAnimationEngine from './animations/ParticleAnimationEngine'; // DISABLED
 import ExecutionDiagram from './ExecutionDiagram';
 import './FactoryView.css';
@@ -14,7 +13,7 @@ import './FactoryView.css';
  * Visualizes Spark execution step-by-step showing partitions, stages,
  * shuffles, and parallelism in action.
  */
-function FactoryView({ simulationData, stageFlowData }) {
+function FactoryView({ simulationData }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -24,7 +23,6 @@ function FactoryView({ simulationData, stageFlowData }) {
 
   // Debug logging
   console.log('FactoryView - simulationData:', simulationData);
-  console.log('FactoryView - stageFlowData:', stageFlowData);
 
   // If no simulation data, show message
   if (!simulationData) {
@@ -182,17 +180,6 @@ function FactoryView({ simulationData, stageFlowData }) {
         metrics={metrics}
         partitionCount={partitions?.length || 0}
       />
-
-      {/* [A5] Stage Flow View - Stage-by-Stage Interactive Visualization */}
-      {stageFlowData && stageFlowData.stages && stageFlowData.stages.length > 0 && (
-        <div style={{ marginTop: '40px' }}>
-          <StageFlowView
-            stageFlowData={stageFlowData}
-            selectedStageIndex={selectedStageIndex}
-            onStageSelect={handleStageSelect}
-          />
-        </div>
-      )}
     </div>
   );
 }

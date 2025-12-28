@@ -1,9 +1,9 @@
 import './StageFlowView.css';
 
 /**
- * StageDetailsPanel - Shows detailed information about the current stage
+ * StageDetailsPanel - Shows detailed information about the current step
  *
- * Displays stage name, operation type, partition counts, and shuffle indicator.
+ * Displays step name, operation type, partition counts, and shuffle indicator.
  */
 function StageDetailsPanel({ stage, stageIndex, totalStages }) {
   const getStageTypeLabel = (type) => {
@@ -32,7 +32,7 @@ function StageDetailsPanel({ stage, stageIndex, totalStages }) {
     <div className="stage-details-panel">
       <div className="stage-details-header">
         <h3>
-          {getStageIcon(stage.name)} Stage {stageIndex + 1}: {stage.name}
+          {getStageIcon(stage.name)} Step {stageIndex + 1}: {stage.name}
         </h3>
         <span className="stage-type-badge">{getStageTypeLabel(stage.type)}</span>
       </div>

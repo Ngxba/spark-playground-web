@@ -219,17 +219,8 @@ class ExecutionSimulator:
         physical_plan: str,
         execution_metadata: Optional[Dict[str, Any]]
     ) -> int:
-        """Estimate the number of partitions from the plan"""
-        # Default to a reasonable number
-        default_partitions = 10
-
-        # Try to extract from plan or metadata
-        if execution_metadata and "metrics" in execution_metadata:
-            # Could extract from spark.sql.shuffle.partitions config
-            pass
-
-        # For now, use default
-        return default_partitions
+        """Extract partition count from physical plan with proper fallback"""
+        return self._extract_initial_partition_count(physical_plan, execution_metadata)
 
     def _generate_nodes(self) -> List[Node]:
         """Generate worker nodes"""
@@ -632,7 +623,7 @@ class ExecutionSimulator:
 
         try:
             # Parse physical plan to identify stages and operations
-            stages_info = self._parse_physical_plan_detailed(physical_plan)
+            stages_info = self._parse_physical_plan_detailed(physical_plan, execution_metadata)
 
             # Generate stage flow with educational content
             stages = []
@@ -675,7 +666,14 @@ class ExecutionSimulator:
         Examples:
         - "Exchange rangepartitioning(id, 200)" -> 200
         - "Exchange hashpartitioning(key, 4)" -> 4
+        - "Exchange RoundRobinPartitioning(12)" -> 12
+        - "Exchange SinglePartition" -> 1
         """
+        # Try to match RoundRobinPartitioning(N) - partition count is the only argument
+        match = re.search(r'RoundRobinPartitioning\((\d+)\)', line)
+        if match:
+            return int(match.group(1))
+
         # Try to match patterns like "partitioning(..., N)" where N is the partition count
         match = re.search(r'partitioning\([^,]+,\s*(\d+)\)', line)
         if match:
@@ -686,9 +684,47 @@ class ExecutionSimulator:
         if match:
             return int(match.group(1))
 
+        # Check for SinglePartition (coalesce to 1)
+        if 'SinglePartition' in line:
+            return 1
+
         return None
 
-    def _parse_physical_plan_detailed(self, physical_plan: str) -> List[Dict[str, Any]]:
+    def _extract_initial_partition_count(
+        self,
+        physical_plan: Optional[str],
+        execution_metadata: Optional[Dict[str, Any]]
+    ) -> int:
+        """
+        Extract initial partition count with proper fallback chain
+
+        Fallback order:
+        1. Extract from physical plan Exchange operations (most accurate)
+        2. Use cluster config shuffle_partitions
+        3. Use Spark local mode default (8)
+        """
+        # Primary: Extract from physical plan
+        if physical_plan:
+            lines = physical_plan.split('\n')
+            for line in lines:
+                partition_count = self._extract_partition_count_from_line(line)
+                if partition_count:
+                    return partition_count
+
+        # Secondary: Use cluster config
+        if execution_metadata and 'cluster_config' in execution_metadata:
+            shuffle_partitions = execution_metadata['cluster_config'].get('shuffle_partitions')
+            if shuffle_partitions:
+                return int(shuffle_partitions)
+
+        # Tertiary: Spark local mode default
+        return 8
+
+    def _parse_physical_plan_detailed(
+        self,
+        physical_plan: str,
+        execution_metadata: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
         """
         Parse physical plan with detailed stage information
 
@@ -787,17 +823,11 @@ class ExecutionSimulator:
 
         # Convert operations to stages and track partition counts
         if operations_found:
-            # Default starting partition count (Spark default for local mode)
-            # This can be overridden if we find explicit partition info
-            current_partition_count = 8  # Spark local mode default
-
-            # Try to find the initial partition count from the first scan/input
-            first_op = operations_found[0] if operations_found else None
-            if first_op and first_op.get('type') == 'scan':
-                # Check if partition count is mentioned in the scan line
-                partition_from_scan = self._extract_partition_count_from_line(first_op.get('detail', ''))
-                if partition_from_scan:
-                    current_partition_count = partition_from_scan
+            # Extract initial partition count using shared logic
+            current_partition_count = self._extract_initial_partition_count(
+                physical_plan,
+                execution_metadata
+            )
 
             for op in operations_found:
                 input_partitions = current_partition_count

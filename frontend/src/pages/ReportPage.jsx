@@ -6,8 +6,10 @@ import ExecutionInsights from '../components/ExecutionInsights';
 import ProgressiveHints from '../components/ProgressiveHints';
 import QueryPlanViewer from '../components/QueryPlanViewer';
 import FactoryView from '../components/FactoryView/FactoryView';
+import StageFlowView from '../components/FactoryView/StageFlowView';
 import ClusterOverview from '../components/ClusterOverview';
 import ConceptPanel from '../components/FactoryView/ConceptPanel';
+import RunHistory from '../components/RunHistory';
 import './ReportPage.css';
 
 function ReportPage() {
@@ -87,6 +89,12 @@ function ReportPage() {
             Factory View
           </button>
           <button
+            className={`report-tab ${activeTab === 'factory-steps' ? 'active' : ''}`}
+            onClick={() => setActiveTab('factory-steps')}
+          >
+            📋 Factory Step Breakdown
+          </button>
+          <button
             className={`report-tab ${activeTab === 'results' ? 'active' : ''}`}
             onClick={() => setActiveTab('results')}
           >
@@ -115,6 +123,12 @@ function ReportPage() {
             onClick={() => setActiveTab('hints')}
           >
             Hints
+          </button>
+          <button
+            className={`report-tab ${activeTab === 'run-history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('run-history')}
+          >
+            📊 Run History
           </button>
         </div>
 
@@ -217,6 +231,11 @@ function ReportPage() {
           {activeTab === 'factory' && (
             <FactoryView
               simulationData={result.execution_simulation}
+            />
+          )}
+
+          {activeTab === 'factory-steps' && (
+            <StageFlowView
               stageFlowData={result.stage_flow}
             />
           )}
@@ -256,6 +275,20 @@ function ReportPage() {
               baseHint={result.hint}
               stars={result.stars}
               metrics={result.metrics}
+            />
+          )}
+
+          {activeTab === 'run-history' && (
+            <RunHistory
+              puzzleId={puzzleId}
+              onSelectRun={(runDetail) => {
+                // Load the selected run into the current view
+                navigate(`/puzzle/${puzzleId}/report`, {
+                  state: { result: runDetail },
+                  replace: true
+                });
+                setActiveTab('overview');
+              }}
             />
           )}
         </div>

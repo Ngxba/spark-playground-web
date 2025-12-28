@@ -8,9 +8,9 @@ import FullDataFlowVisualization from './FullDataFlowVisualization';
 import './StageFlowView.css';
 
 /**
- * StageFlowView - Interactive Stage-by-Stage Execution Visualization
+ * StageFlowView - Interactive Step-by-Step Execution Visualization
  *
- * Allows users to navigate through Spark execution stages one at a time,
+ * Allows users to navigate through execution steps one at a time,
  * with educational explanations and data flow visualization.
  */
 function StageFlowView({ stageFlowData, selectedStageIndex: externalSelectedStageIndex, onStageSelect }) {
@@ -34,10 +34,10 @@ function StageFlowView({ stageFlowData, selectedStageIndex: externalSelectedStag
     return (
       <div className="stage-flow-view-empty">
         <div className="empty-state">
-          <h3>No Stage Flow Data Available</h3>
+          <h3>No Step-by-Step Flow Available</h3>
           <p>
-            Run your code to see a stage-by-stage visualization of how Spark executes it.
-            You'll be able to navigate through each stage, see data flow, and learn about
+            Run your code to see a step-by-step visualization of how Spark executes it.
+            You'll be able to navigate through each step, see data flow, and learn about
             shuffles and optimizations.
           </p>
         </div>
@@ -71,7 +71,7 @@ function StageFlowView({ stageFlowData, selectedStageIndex: externalSelectedStag
     <div className="stage-flow-view">
       {/* [A5.1] Header with overall explanation */}
       <div className="stage-flow-header">
-        <h2>[A5] Stage-by-Stage Execution</h2>
+        <h2>[A5] Step-by-Step Execution</h2>
         <p className="overall-explanation">{explanation}</p>
         {shuffleCount > 0 && (
           <div className="shuffle-warning">

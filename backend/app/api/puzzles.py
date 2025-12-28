@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
+from sqlalchemy.orm import Session
 from app.models import Puzzle, PuzzleMetadata, RunRequest, RunResult
 from app.services import Judge, PuzzleLoader
+from app.database import get_db
+from app.repositories.run_repository import RunRepository
 
 router = APIRouter()
 
@@ -22,8 +25,8 @@ async def get_puzzle(puzzle_id: str):
         raise HTTPException(status_code=404, detail=f"Puzzle '{puzzle_id}' not found")
     return puzzle
 
-@router.post("/puzzles/{puzzle_id}/run", response_model=RunResult)
-async def run_puzzle(puzzle_id: str, request: RunRequest):
+@router.post("/puzzles/{puzzle_id}/run")
+async def run_puzzle(puzzle_id: str, request: RunRequest, db: Session = Depends(get_db)):
     """
     Execute user code for a puzzle and return evaluation results
     """
@@ -40,7 +43,18 @@ async def run_puzzle(puzzle_id: str, request: RunRequest):
             input_data=puzzle.initial_data,
             expected_output=puzzle.expected_output
         )
-        return result
+
+        # Save to database
+        try:
+            saved_run = RunRepository.save_run(db, puzzle_id, request.code, result)
+            # Add run_id to response
+            result_dict = result.dict()
+            result_dict["run_id"] = str(saved_run.id)
+            return result_dict
+        except Exception as db_error:
+            # Log error but don't fail the request
+            print(f"Error saving run to database: {db_error}")
+            return result
     except Exception as e:
         raise HTTPException(
             status_code=500,

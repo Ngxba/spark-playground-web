@@ -1,9 +1,9 @@
 import './StageFlowView.css';
 
 /**
- * NavigationControls - Buttons to move through stages
+ * NavigationControls - Buttons to move through steps
  *
- * Provides Previous/Next buttons and current stage indicator.
+ * Provides Previous/Next buttons and current step indicator.
  */
 function NavigationControls({
   currentIndex,
@@ -19,20 +19,20 @@ function NavigationControls({
         className="nav-button prev-button"
         onClick={onPrevious}
         disabled={!canGoPrevious}
-        title="Previous Stage"
+        title="Previous Step"
       >
         ← Previous
       </button>
 
       <div className="stage-indicator">
-        Stage {currentIndex + 1} of {totalStages}
+        Step {currentIndex + 1} of {totalStages}
       </div>
 
       <button
         className="nav-button next-button"
         onClick={onNext}
         disabled={!canGoNext}
-        title="Next Stage"
+        title="Next Step"
       >
         Next →
       </button>
