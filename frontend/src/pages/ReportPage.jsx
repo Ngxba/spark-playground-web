@@ -8,8 +8,6 @@ import QueryPlanViewer from '../components/QueryPlanViewer';
 import FactoryView from '../components/FactoryView/FactoryView';
 import StageFlowView from '../components/FactoryView/StageFlowView';
 import ClusterOverview from '../components/ClusterOverview';
-import ConceptPanel from '../components/FactoryView/ConceptPanel';
-import RunHistory from '../components/RunHistory';
 import './ReportPage.css';
 
 function ReportPage() {
@@ -113,22 +111,10 @@ function ReportPage() {
             Query Plan
           </button>
           <button
-            className={`report-tab ${activeTab === 'concepts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('concepts')}
-          >
-            💡 Learn Concepts
-          </button>
-          <button
             className={`report-tab ${activeTab === 'hints' ? 'active' : ''}`}
             onClick={() => setActiveTab('hints')}
           >
             Hints
-          </button>
-          <button
-            className={`report-tab ${activeTab === 'run-history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('run-history')}
-          >
-            📊 Run History
           </button>
         </div>
 
@@ -271,32 +257,11 @@ function ReportPage() {
             />
           )}
 
-          {activeTab === 'concepts' && (
-            <ConceptPanel
-              currentState={null}
-              simulationData={result.execution_simulation}
-            />
-          )}
-
           {activeTab === 'hints' && (
             <ProgressiveHints
               baseHint={result.hint}
               stars={result.stars}
               metrics={result.metrics}
-            />
-          )}
-
-          {activeTab === 'run-history' && (
-            <RunHistory
-              puzzleId={puzzleId}
-              onSelectRun={(runDetail) => {
-                // Load the selected run into the current view
-                navigate(`/puzzle/${puzzleId}/report`, {
-                  state: { result: runDetail },
-                  replace: true
-                });
-                setActiveTab('overview');
-              }}
             />
           )}
         </div>
