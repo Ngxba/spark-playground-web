@@ -152,6 +152,9 @@
   overflow-x: auto;
   border: 1px solid #e0e0e0;
   font-family: 'Monaco', 'Courier New', monospace;
+  color: #1a1d23;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .example-improvement {
