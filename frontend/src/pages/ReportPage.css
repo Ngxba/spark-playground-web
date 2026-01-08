@@ -82,8 +82,172 @@
 }
 
 /* ============================================
-   HEADER SECTION
+   HEADER SECTION (workspace-action-bar style)
    ============================================ */
+
+.workspace-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-elevated) 100%);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 100;
+}
+
+.workspace-action-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--color-primary) 50%,
+    transparent 100%
+  );
+  opacity: 0.3;
+}
+
+.action-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.action-back-btn:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
+.problem-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.problem-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.action-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Report Status Display */
+.report-status-display {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--color-bg-darker);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.status-success,
+.status-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-success .status-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--color-success);
+  color: var(--color-bg-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+}
+
+.status-error .status-icon {
+  width: 24px;
+  height: 24px;
+  background: var(--color-error);
+  color: var(--color-bg-dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+}
+
+.status-success .status-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-success);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-error .status-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-error);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stars-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--color-bg-darker);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.stars-display .stars {
+  display: flex;
+  gap: 4px;
+}
+
+.stars-display .star-filled {
+  color: var(--color-warning);
+  font-size: 20px;
+  filter: drop-shadow(0 0 8px rgba(255, 149, 0, 0.6));
+}
+
+.stars-display .star-empty {
+  color: var(--color-border);
+  font-size: 20px;
+}
 
 .report-page-header {
   background: linear-gradient(180deg, var(--color-bg-dark) 0%, var(--color-surface) 100%);
@@ -270,17 +434,13 @@
 .report-tabs {
   display: flex;
   background: var(--color-surface-elevated);
-  border-bottom: 2px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 4px;
+  gap: 4px;
   overflow-x: auto;
-  overflow-y: visible;
   flex-shrink: 0;
-  min-height: 60px;
-  align-items: stretch;
   position: relative;
-  z-index: 5;
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 var(--color-border-bright);
+  z-index: 100;
   scrollbar-width: thin;
   scrollbar-color: var(--color-primary) var(--color-bg-dark);
 }
@@ -305,57 +465,43 @@
 }
 
 .report-tab {
-  padding: 1rem 1.8rem;
+  padding: 12px 20px;
   background: transparent;
   border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  font-family: 'Rajdhani', sans-serif;
+  border-bottom: 2px solid transparent;
   color: var(--color-text-secondary);
-  white-space: nowrap;
-  transition: all var(--transition-base);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: fit-content;
+  font-size: 13px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: 'Rajdhani', sans-serif;
   position: relative;
-}
-
-.report-tab::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  transition: width var(--transition-base);
-  box-shadow: 0 0 15px var(--color-primary-glow);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .report-tab:hover {
-  color: var(--color-primary);
+  color: var(--color-text);
   background: rgba(0, 217, 255, 0.05);
-}
-
-.report-tab:hover::before {
-  width: 80%;
 }
 
 .report-tab.active {
   color: var(--color-primary);
-  background: var(--color-surface);
-  border-bottom-color: transparent;
+  border-bottom-color: var(--color-primary);
+  background: rgba(0, 217, 255, 0.1);
 }
 
-.report-tab.active::before {
-  width: 100%;
+.report-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 /* ============================================
@@ -786,7 +932,7 @@
     0 -4px 20px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 var(--color-border-bright);
   position: relative;
-  z-index: 3;
+  z-index: 100;
 }
 
 .report-page-footer::before {
@@ -850,6 +996,41 @@
     padding: 0;
   }
 
+  .workspace-action-bar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 15px;
+  }
+
+  .problem-title {
+    font-size: 1rem;
+  }
+
+  .action-bar-controls {
+    gap: 8px;
+  }
+
+  .report-status-display {
+    padding: 6px 12px;
+  }
+
+  .status-success .status-icon,
+  .status-error .status-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  .status-success .status-text,
+  .status-error .status-text {
+    font-size: 12px;
+  }
+
+  .stars-display .star-filled,
+  .stars-display .star-empty {
+    font-size: 16px;
+  }
+
   .report-page-header {
     padding: 1.5rem 1.5rem 1rem;
   }
@@ -873,13 +1054,9 @@
     font-size: 2rem;
   }
 
-  .report-tabs {
-    min-height: 50px;
-  }
-
   .report-tab {
-    padding: 0.8rem 1.2rem;
-    font-size: 11px;
+    padding: 10px 16px;
+    font-size: 12px;
   }
 
   .report-page-main {
@@ -921,6 +1098,38 @@
 }
 
 @media (max-width: 480px) {
+  .workspace-action-bar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .action-back-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .problem-title {
+    font-size: 0.9rem;
+  }
+
+  .report-status-display {
+    padding: 5px 10px;
+  }
+
+  .status-success .status-text,
+  .status-error .status-text {
+    font-size: 11px;
+  }
+
+  .stars-display {
+    padding: 3px 8px;
+  }
+
+  .stars-display .star-filled,
+  .stars-display .star-empty {
+    font-size: 14px;
+  }
+
   .report-page-header h2 {
     font-size: 1.6rem;
   }
@@ -932,8 +1141,8 @@
   }
 
   .report-tab {
-    padding: 0.6rem 1rem;
-    font-size: 10px;
+    padding: 8px 12px;
+    font-size: 11px;
   }
 
   .report-page-main {

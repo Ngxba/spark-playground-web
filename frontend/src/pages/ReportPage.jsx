@@ -50,20 +50,35 @@ function ReportPage() {
   return (
     <div className="report-page-container">
       <div className="report-page-content">
-        <div className="report-page-header">
-          <button className="back-button" onClick={handleBack}>
-            ← Back to Workspace
+        <div className="workspace-action-bar">
+          <button onClick={handleBack} className="action-back-btn">
+            <span>←</span>
+            Back
           </button>
-          <div className="header-content">
-            <h2>Run Report</h2>
-            <div className="header-status">
+
+          <div className="problem-title-section">
+            <h1 className="problem-title">Run Report</h1>
+          </div>
+
+          <div className="action-bar-controls">
+            <div className="report-status-display">
               {result.correct ? (
-                <span className="status-badge success">✅ Correct</span>
+                <div className="status-success">
+                  <span className="status-icon">✓</span>
+                  <span className="status-text">Correct</span>
+                </div>
               ) : (
-                <span className="status-badge error">❌ Incorrect</span>
+                <div className="status-error">
+                  <span className="status-icon">✗</span>
+                  <span className="status-text">Incorrect</span>
+                </div>
               )}
-              {result.correct && renderStars(result.stars)}
             </div>
+            {result.correct && (
+              <div className="stars-display">
+                {renderStars(result.stars)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -78,7 +93,7 @@ function ReportPage() {
             className={`report-tab ${activeTab === 'cluster' ? 'active' : ''}`}
             onClick={() => setActiveTab('cluster')}
           >
-            🖥️ Cluster
+            Cluster
           </button>
           <button
             className={`report-tab ${activeTab === 'factory' ? 'active' : ''}`}
@@ -90,7 +105,7 @@ function ReportPage() {
             className={`report-tab ${activeTab === 'factory-steps' ? 'active' : ''}`}
             onClick={() => setActiveTab('factory-steps')}
           >
-            📋 Factory Step Breakdown
+            Factory Step Breakdown
           </button>
           <button
             className={`report-tab ${activeTab === 'results' ? 'active' : ''}`}

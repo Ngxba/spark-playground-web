@@ -1,13 +1,17 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { authService } from '../services/api';
+import { puzzleService } from '../services/api';
 import './Header.css';
 
 function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [statusText, setStatusText] = useState('SYSTEM ONLINE');
   const userMenuRef = useRef(null);
 
   // Check authentication state on mount and when storage changes
@@ -36,6 +40,34 @@ function Header() {
       window.removeEventListener('authStateChanged', checkAuthStatus);
     };
   }, []);
+
+  // Update status text based on current route
+  useEffect(() => {
+    const updateStatusText = async () => {
+      const path = location.pathname;
+
+      if (path === '/puzzles') {
+        setStatusText('PUZZLES');
+      } else if (path.startsWith('/puzzle/')) {
+        // Extract puzzleId from path
+        const puzzleId = path.split('/')[2];
+        if (puzzleId && !path.includes('/report')) {
+          try {
+            const puzzle = await puzzleService.getPuzzle(puzzleId);
+            setStatusText(puzzle.title.toUpperCase());
+          } catch (err) {
+            setStatusText('PUZZLE');
+          }
+        } else if (path.includes('/report')) {
+          setStatusText('RUN REPORT');
+        }
+      } else {
+        setStatusText('SYSTEM ONLINE');
+      }
+    };
+
+    updateStatusText();
+  }, [location.pathname]);
 
   const handleLogin = () => {
     navigate('/signin');
@@ -75,20 +107,13 @@ function Header() {
             <span className="home-icon">🏠</span>
             <span className="home-text">SPARK PLAYGROUND</span>
           </Link>
-
-          <div className="header-divider"></div>
-
-          <Link to="/puzzles" className="header-nav-link">
-            <span className="nav-icon">🧩</span>
-            <span className="nav-text">Puzzles</span>
-          </Link>
         </div>
 
         {/* Center: Status indicator */}
         <div className="header-center">
           <div className="system-status-compact">
             <span className="status-dot-compact"></span>
-            <span className="status-text-compact">SYSTEM ONLINE</span>
+            <span className="status-text-compact">{statusText}</span>
           </div>
         </div>
 

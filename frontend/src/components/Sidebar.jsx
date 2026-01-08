@@ -1,8 +1,33 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { authService } from '../services/api';
 import './Sidebar.css';
 
 function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check authentication state on mount and when storage changes
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const isAuth = authService.isAuthenticated();
+      setIsLoggedIn(isAuth);
+    };
+
+    checkAuthStatus();
+
+    // Listen for storage changes (for cross-tab synchronization)
+    window.addEventListener('storage', checkAuthStatus);
+
+    // Listen for custom auth change events (for same-tab updates)
+    window.addEventListener('authStateChanged', checkAuthStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkAuthStatus);
+      window.removeEventListener('authStateChanged', checkAuthStatus);
+    };
+  }, []);
 
   const navItems = [
     { id: 'library', label: 'Library', icon: '📚', path: '/puzzles' },
@@ -28,32 +53,36 @@ function Sidebar() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-progress">
-            <div className="sidebar-progress-header">
-              <span className="sidebar-progress-title">Your Progress</span>
-            </div>
-            <div className="sidebar-progress-stats">
-              <div className="sidebar-stat">
-                <div className="sidebar-stat-value">0/12</div>
-                <div className="sidebar-stat-label">Solved</div>
+          {isLoggedIn ? (
+            <div className="sidebar-progress">
+              <div className="sidebar-progress-header">
+                <span className="sidebar-progress-title">Your Progress</span>
               </div>
-              <div className="sidebar-stat">
-                <div className="sidebar-stat-value">0%</div>
-                <div className="sidebar-stat-label">Complete</div>
+              <div className="sidebar-progress-stats">
+                <div className="sidebar-stat">
+                  <div className="sidebar-stat-value">0/12</div>
+                  <div className="sidebar-stat-label">Solved</div>
+                </div>
+                <div className="sidebar-stat">
+                  <div className="sidebar-stat-value">0%</div>
+                  <div className="sidebar-stat-label">Complete</div>
+                </div>
+              </div>
+              <div className="sidebar-progress-bar">
+                <div className="sidebar-progress-fill" style={{ width: '0%' }}></div>
               </div>
             </div>
-            <div className="sidebar-progress-bar">
-              <div className="sidebar-progress-fill" style={{ width: '0%' }}></div>
-            </div>
-          </div>
-
-          <button className="sidebar-signin-btn">
-            <span className="sidebar-signin-icon">🔐</span>
-            Sign In
-          </button>
-          <p className="sidebar-signin-text">
-            Sign in to track your progress and save your solutions
-          </p>
+          ) : (
+            <>
+              <button className="sidebar-signin-btn" onClick={() => navigate('/signin')}>
+                <span className="sidebar-signin-icon">🔐</span>
+                Sign In
+              </button>
+              <p className="sidebar-signin-text">
+                Sign in to track your progress and save your solutions
+              </p>
+            </>
+          )}
         </div>
       </div>
     </aside>

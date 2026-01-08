@@ -5,7 +5,7 @@
 .profile-page {
   min-height: calc(100vh - 60px);
   background: var(--color-bg-darker);
-  padding: 2rem;
+  /* padding: 2rem; */
   position: relative;
 }
 
