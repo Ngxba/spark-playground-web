@@ -60,7 +60,7 @@
 /* Hero Banners */
 .hero-banners {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -213,7 +213,8 @@
   gap: 12px;
   overflow-x: auto;
   padding: 4px 0;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
 .topic-filter {
@@ -232,6 +233,8 @@
   cursor: pointer;
   transition: all var(--transition-base);
   white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
 }
 
 .topic-filter-icon {
@@ -571,6 +574,55 @@
   }
 }
 
+/* Medium screens (tablets and small desktops) */
+@media (max-width: 1024px) {
+  .hero-banners {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .hero-banner {
+    padding: 20px;
+  }
+
+  .hero-banner-title {
+    font-size: 1.2rem;
+  }
+
+  .hero-banner-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .hero-banner-icon {
+    font-size: 36px;
+    min-width: 45px;
+  }
+
+  /* Topic filters improvements */
+  .topic-filters {
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .topic-filter {
+    padding: 8px 14px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .topic-filter-icon {
+    font-size: 15px;
+  }
+
+  .topic-filter-count {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+}
+
+/* Tablet screens */
 @media (max-width: 900px) {
   .col-acceptance {
     display: none;
@@ -578,6 +630,104 @@
 
   .hero-banners {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .hero-banner {
+    padding: 18px;
+  }
+
+  .hero-banner-content {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .hero-banner-title {
+    font-size: 1.1rem;
+  }
+
+  .hero-banner-subtitle {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .hero-banner-icon {
+    font-size: 32px;
+    min-width: 40px;
+  }
+
+  .hero-banner-action {
+    padding: 9px;
+    font-size: 11px;
+  }
+
+  /* Topic filters for tablets */
+  .topic-filter {
+    padding: 7px 12px;
+  }
+
+  .topic-filter-label {
+    font-size: 12px;
+  }
+}
+
+/* Medium-small screens */
+@media (max-width: 768px) {
+  .puzzle-list-modern {
+    padding: 1rem;
+  }
+
+  .hero-banners {
+    margin-bottom: 24px;
+  }
+
+  .hero-banner {
+    padding: 16px;
+  }
+
+  .hero-banner-title {
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+
+  .hero-banner-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .hero-banner-icon {
+    font-size: 28px;
+    min-width: 36px;
+  }
+
+  .hero-banner-label {
+    top: 12px;
+    right: 12px;
+    padding: 3px 8px;
+    font-size: 8px;
+  }
+
+  .hero-banner-action {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  /* Topic filters scroll on smaller tablets */
+  .topic-filters-section {
+    margin-bottom: 20px;
+  }
+
+  .topic-filter {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .topic-filter-icon {
+    font-size: 14px;
+  }
+
+  .topic-filter-count {
+    padding: 2px 5px;
+    font-size: 9px;
   }
 }
 
@@ -609,24 +759,82 @@
   .puzzle-number {
     display: none;
   }
+
+  /* Further hero banner adjustments for mobile */
+  .hero-banner-content {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .hero-banner-title {
+    font-size: 0.95rem;
+  }
+
+  .hero-banner-subtitle {
+    font-size: 0.7rem;
+  }
+
+  /* Topic filters - more compact on mobile */
+  .topic-filter {
+    padding: 6px 9px;
+    gap: 6px;
+  }
 }
 
-/* Scrollbar for topic filters */
+/* Very small screens */
+@media (max-width: 480px) {
+  .puzzle-list-modern {
+    padding: 0.75rem;
+  }
+
+  .hero-banners {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .hero-banner {
+    padding: 14px;
+  }
+
+  .hero-banner-title {
+    font-size: 0.9rem;
+  }
+
+  .hero-banner-subtitle {
+    font-size: 0.65rem;
+    line-height: 1.2;
+  }
+
+  .hero-banner-icon {
+    font-size: 24px;
+    min-width: 30px;
+  }
+
+  .hero-banner-action {
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  /* Compact topic filters */
+  .topic-filter {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+
+  .topic-filter-icon {
+    font-size: 13px;
+  }
+
+  .topic-filter-label {
+    font-size: 10px;
+  }
+
+  .topic-filter-count {
+    display: none;
+  }
+}
+
+/* Hide scrollbar for topic filters (WebKit browsers) */
 .topic-filters::-webkit-scrollbar {
-  height: 6px;
-}
-
-.topic-filters::-webkit-scrollbar-track {
-  background: var(--color-bg-dark);
-  border-radius: 3px;
-}
-
-.topic-filters::-webkit-scrollbar-thumb {
-  background: var(--color-border-bright);
-  border-radius: 3px;
-}
-
-.topic-filters::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
-  box-shadow: 0 0 8px var(--color-primary-glow);
+  display: none;
 }

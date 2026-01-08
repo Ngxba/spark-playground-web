@@ -194,7 +194,7 @@
   margin: 0 0 16px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  /* color: #374151; Liam fixed this */ 
 }
 
 /* Stage Section */

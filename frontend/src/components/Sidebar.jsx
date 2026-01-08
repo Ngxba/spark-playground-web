@@ -5,8 +5,8 @@ function Sidebar() {
   const location = useLocation();
 
   const navItems = [
-    { id: 'library', label: 'Library', icon: '📚', path: '/' },
-    { id: 'puzzles', label: 'Puzzles', icon: '🧩', path: '/', badge: 'New' },
+    { id: 'library', label: 'Library', icon: '📚', path: '/puzzles' },
+    { id: 'puzzles', label: 'Puzzles', icon: '🧩', path: '/puzzles', badge: 'New' },
     { id: 'study-plan', label: 'Study Plan', icon: '📋', path: '/study-plan' },
   ];
 

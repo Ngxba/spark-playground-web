@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { puzzleService } from '../services/api';
 import { runHistoryService } from '../services/runHistoryService';
-import ScenarioPanel from '../components/ScenarioPanel';
 import './PuzzleWorkspace.css';
 
 function PuzzleWorkspace() {
@@ -21,10 +20,10 @@ function PuzzleWorkspace() {
   const [leftTab, setLeftTab] = useState('description');
   const [bottomTab, setBottomTab] = useState('testcases');
   const [language, setLanguage] = useState('python');
-  const [showVisualization, setShowVisualization] = useState(true);
   const [splitPosition, setSplitPosition] = useState(50);
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [showExpectedOutput, setShowExpectedOutput] = useState(false);
 
   // Submissions State
   const [submissions, setSubmissions] = useState([]);
@@ -39,7 +38,13 @@ function PuzzleWorkspace() {
     const savedResult = sessionStorage.getItem(`puzzle_${puzzleId}_last_run`);
     if (savedResult) {
       try {
-        setRunResult(JSON.parse(savedResult));
+        const parsed = JSON.parse(savedResult);
+        // Ensure we have 'success' field (map from 'correct' if needed)
+        const normalizedResult = {
+          ...parsed,
+          success: parsed.success !== undefined ? parsed.success : parsed.correct
+        };
+        setRunResult(normalizedResult);
       } catch (err) {
         console.error('Failed to parse saved run result:', err);
       }
@@ -101,6 +106,23 @@ function PuzzleWorkspace() {
     try {
       const data = await runHistoryService.getPuzzleRuns(puzzleId);
       setSubmissions(data);
+
+      // Load the most recent submission's result to display in bottom panel
+      if (data && data.length > 0) {
+        const mostRecentSubmission = data[0];
+        try {
+          const runDetail = await runHistoryService.getRunDetail(mostRecentSubmission.id);
+          // Map API response format to UI format (correct -> success)
+          const normalizedResult = {
+            ...runDetail,
+            success: runDetail.correct
+          };
+          setRunResult(normalizedResult);
+          sessionStorage.setItem(`puzzle_${puzzleId}_last_run`, JSON.stringify(normalizedResult));
+        } catch (error) {
+          console.error('Error loading most recent submission detail:', error);
+        }
+      }
     } catch (error) {
       console.error('Error loading submissions:', error);
       setSubmissionsError('Failed to load submission history.');
@@ -112,8 +134,20 @@ function PuzzleWorkspace() {
   const handleViewSubmission = async (runId) => {
     try {
       const runDetail = await runHistoryService.getRunDetail(runId);
+
+      // Map API response format to UI format (correct -> success)
+      const normalizedResult = {
+        ...runDetail,
+        success: runDetail.correct
+      };
+
+      // Update the bottom panel with this submission's result
+      setRunResult(normalizedResult);
+      sessionStorage.setItem(`puzzle_${puzzleId}_last_run`, JSON.stringify(normalizedResult));
+
+      // Navigate to detailed report page
       navigate(`/puzzle/${puzzleId}/report`, {
-        state: { result: runDetail }
+        state: { result: normalizedResult }
       });
     } catch (error) {
       console.error('Error loading run detail:', error);
@@ -134,10 +168,16 @@ function PuzzleWorkspace() {
 
       const result = await puzzleService.runPuzzle(puzzleId, code);
 
+      // Map API response format to UI format (correct -> success)
+      const normalizedResult = {
+        ...result,
+        success: result.correct
+      };
+
       setTimeout(() => {
-        setRunResult(result);
+        setRunResult(normalizedResult);
         setIsRunning(false);
-        sessionStorage.setItem(`puzzle_${puzzleId}_last_run`, JSON.stringify(result));
+        sessionStorage.setItem(`puzzle_${puzzleId}_last_run`, JSON.stringify(normalizedResult));
         // Reload submissions if on submissions tab
         if (leftTab === 'submissions') {
           loadSubmissions();
@@ -230,7 +270,7 @@ function PuzzleWorkspace() {
           <div className="error-icon">⚠️</div>
           <h2>Connection Error</h2>
           <p>{error || 'Puzzle not found'}</p>
-          <button onClick={() => navigate('/')} className="btn-primary">
+          <button onClick={() => navigate('/puzzles')} className="btn-primary">
             Back to Problems
           </button>
         </div>
@@ -242,7 +282,7 @@ function PuzzleWorkspace() {
     <div className="workspace-modern">
       {/* Top Action Bar */}
       <div className="workspace-action-bar">
-        <button onClick={() => navigate('/')} className="action-back-btn">
+        <button onClick={() => navigate('/puzzles')} className="action-back-btn">
           <span>←</span>
           Problems
         </button>
@@ -322,6 +362,11 @@ function PuzzleWorkspace() {
                 </div>
 
                 <div className="problem-section">
+                  <h3 className="section-title">📖 Scenario</h3>
+                  <p className="section-text">{puzzle.scenario}</p>
+                </div>
+
+                <div className="problem-section">
                   <h3 className="section-title">🏷️ Topics</h3>
                   <div className="problem-tags">
                     {puzzle.tags.map((tag) => (
@@ -333,13 +378,64 @@ function PuzzleWorkspace() {
                 </div>
 
                 <div className="problem-section">
-                  <h3 className="section-title">💡 Example</h3>
-                  <div className="example-box">
-                    <div className="example-label">Input:</div>
-                    <pre className="example-code">Sample Spark DataFrame with transactions</pre>
-                    <div className="example-label">Output:</div>
-                    <pre className="example-code">Transformed DataFrame with aggregated results</pre>
-                  </div>
+                  <h3 className="section-title">🎯 Expected Result</h3>
+                  <button
+                    className="toggle-expected-btn"
+                    onClick={() => setShowExpectedOutput(!showExpectedOutput)}
+                  >
+                    {showExpectedOutput ? 'Hide' : 'Show'} Example Output
+                  </button>
+                  {showExpectedOutput && puzzle.expected_output && (
+                    <div className="example-box">
+                      {Array.isArray(puzzle.expected_output) ? (
+                        <>
+                          <table className="expected-output-table">
+                            <thead>
+                              <tr>
+                                {Object.keys(puzzle.expected_output[0] || {}).map((key) => (
+                                  <th key={key}>{key}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {puzzle.expected_output.slice(0, 3).map((row, idx) => (
+                                <tr key={idx}>
+                                  {Object.values(row).map((val, i) => (
+                                    <td key={i}>{String(val)}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {puzzle.expected_output.length > 3 && (
+                            <div className="more-rows-note">
+                              ... and {puzzle.expected_output.length - 3} more rows
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <pre className="example-code">{JSON.stringify(puzzle.expected_output, null, 2)}</pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="problem-section">
+                  <h3 className="section-title">💡 Quick Tips</h3>
+                  <ul className="tips-list">
+                    <li>
+                      <strong>Understand the data:</strong> Check what columns are available
+                    </li>
+                    <li>
+                      <strong>Think efficiency:</strong> Minimize shuffles and stages
+                    </li>
+                    <li>
+                      <strong>Test your code:</strong> Run it to see if it produces the expected output
+                    </li>
+                    <li>
+                      <strong>Check the Report:</strong> After running, submit to see how Spark executes your code
+                    </li>
+                  </ul>
                 </div>
               </div>
             )}
@@ -510,14 +606,6 @@ function PuzzleWorkspace() {
               <option value="python">PySpark</option>
               <option value="scala">Scala</option>
             </select>
-
-            <button
-              className="visualization-toggle"
-              onClick={() => setShowVisualization(!showVisualization)}
-            >
-              <span>{showVisualization ? '🔼' : '🔽'}</span>
-              Factory View
-            </button>
           </div>
 
           <div className="editor-main-container">
@@ -563,6 +651,16 @@ function PuzzleWorkspace() {
                   )}
                 </button>
                 <button
+                  className={`bottom-tab ${bottomTab === 'summary' ? 'active' : ''}`}
+                  onClick={() => setBottomTab('summary')}
+                  disabled={!runResult || isRunning}
+                >
+                  Summary
+                  {runResult && runResult.metrics && (
+                    <span className="summary-badge">{runResult.metrics.shuffles}S</span>
+                  )}
+                </button>
+                <button
                   className={`bottom-tab ${bottomTab === 'console' ? 'active' : ''}`}
                   onClick={() => setBottomTab('console')}
                 >
@@ -573,17 +671,49 @@ function PuzzleWorkspace() {
               <div className="bottom-panel-content">
                 {bottomTab === 'testcases' && (
                   <div className="testcases-panel">
+                    {/* Overall Test Result Status */}
+                    {runResult && (
+                      <div className={`testcase-overall-status ${runResult.success ? 'success' : 'failed'}`}>
+                        <div className="status-icon-large">
+                          {runResult.success ? '✓' : '✗'}
+                        </div>
+                        <div className="status-content">
+                          <h4>{runResult.success ? 'Accepted' : 'Wrong Answer'}</h4>
+                          <p>{runResult.message || (runResult.success ? 'All test cases passed' : 'Some test cases failed')}</p>
+                        </div>
+                        {runResult.stars > 0 && (
+                          <div className="status-stars">
+                            {[...Array(3)].map((_, i) => (
+                              <span
+                                key={i}
+                                className={`star ${i < runResult.stars ? 'filled' : 'empty'}`}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Test Case Item */}
                     <div className="testcase-item">
                       <div className="testcase-header">
                         <span className="testcase-label">Test Case 1</span>
-                        <span className="testcase-status pending">Pending</span>
+                        <span className={`testcase-status ${
+                          !runResult ? 'pending' :
+                          runResult.success ? 'passed' :
+                          'failed'
+                        }`}>
+                          {!runResult ? 'Pending' : runResult.success ? 'Passed' : 'Failed'}
+                        </span>
                       </div>
                       <div className="testcase-data">
                         <div className="testcase-input">
-                          <strong>Input:</strong> Sample DataFrame
+                          <strong>Input:</strong> Sample DataFrame with transactions
                         </div>
                         <div className="testcase-expected">
-                          <strong>Expected:</strong> Aggregated results
+                          <strong>Expected:</strong> Transformed DataFrame with aggregated results
                         </div>
                       </div>
                     </div>
@@ -601,42 +731,54 @@ function PuzzleWorkspace() {
                         <p>Processing your transformation pipeline</p>
                       </div>
                     ) : runResult ? (
-                      <div className={`result-display ${runResult.success ? 'success' : 'error'}`}>
-                        <div className="result-header">
-                          <div className="result-icon">
-                            {runResult.success ? '✅' : '❌'}
-                          </div>
-                          <div className="result-summary">
-                            <h3>{runResult.success ? 'All Tests Passed!' : 'Tests Failed'}</h3>
-                            <p>{runResult.message || 'Check the output below'}</p>
-                          </div>
-                        </div>
-
-                        {runResult.stars > 0 && (
-                          <div className="result-stars">
-                            {[...Array(3)].map((_, i) => (
-                              <span
-                                key={i}
-                                className={`star ${i < runResult.stars ? 'filled' : 'empty'}`}
-                              >
-                                ★
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {runResult.success && (
-                          <button
-                            onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })}
-                            className="btn-primary"
-                          >
-                            View Full Report
-                          </button>
-                        )}
-
+                      <div className="result-display-compact">
                         {runResult.error && (
-                          <div className="error-output">
+                          <div className="error-output-compact">
+                            <div className="error-header">
+                              <span className="error-label">Error Message</span>
+                            </div>
                             <pre>{runResult.error}</pre>
+                          </div>
+                        )}
+
+                        {/* Output DataFrame Display */}
+                        {runResult.output && (
+                          <div className="output-dataframe-section">
+                            <div className="output-header">
+                              <span className="output-label">Output</span>
+                              {runResult.output.length > 0 && (
+                                <span className="output-count">{runResult.output.length} rows</span>
+                              )}
+                            </div>
+                            <div className="output-table-wrapper">
+                              {Array.isArray(runResult.output) && runResult.output.length > 0 ? (
+                                <table className="output-table-compact">
+                                  <thead>
+                                    <tr>
+                                      {Object.keys(runResult.output[0]).map((key) => (
+                                        <th key={key}>{key}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {runResult.output.slice(0, 10).map((row, idx) => (
+                                      <tr key={idx}>
+                                        {Object.values(row).map((val, i) => (
+                                          <td key={i}>{String(val)}</td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                <pre className="output-text-compact">{JSON.stringify(runResult.output, null, 2)}</pre>
+                              )}
+                              {Array.isArray(runResult.output) && runResult.output.length > 10 && (
+                                <div className="output-more-rows">
+                                  ... and {runResult.output.length - 10} more rows
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -645,6 +787,87 @@ function PuzzleWorkspace() {
                         <div className="no-results-icon">📊</div>
                         <h3>No Results Yet</h3>
                         <p>Run your code to see results</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {bottomTab === 'summary' && (
+                  <div className="summary-panel">
+                    {runResult && runResult.metrics ? (
+                      <div className="summary-content-compact">
+                        <div className="summary-metrics-grid">
+                          <div className="metric-card">
+                            <span className="metric-icon-large">🔁</span>
+                            <div className="metric-info">
+                              <span className="metric-label-small">Shuffles</span>
+                              <span className={`metric-value-large ${runResult.metrics.shuffles === 0 ? 'optimal' : ''}`}>
+                                {runResult.metrics.shuffles || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="metric-card">
+                            <span className="metric-icon-large">🏭</span>
+                            <div className="metric-info">
+                              <span className="metric-label-small">Stages</span>
+                              <span className="metric-value-large">{runResult.metrics.stages || 0}</span>
+                            </div>
+                          </div>
+
+                          <div className="metric-card">
+                            <span className="metric-icon-large">⚡</span>
+                            <div className="metric-info">
+                              <span className="metric-label-small">Time</span>
+                              <span className="metric-value-large">{runResult.metrics.time_simulated || 0}s</span>
+                            </div>
+                          </div>
+
+                          {runResult.metrics.cache_used && (
+                            <div className="metric-card badge-success">
+                              <span className="metric-icon-large">💾</span>
+                              <div className="metric-info">
+                                <span className="metric-label-small">Cache</span>
+                                <span className="metric-value-large">Used</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {runResult.metrics.broadcast_used && (
+                            <div className="metric-card badge-success">
+                              <span className="metric-icon-large">📡</span>
+                              <div className="metric-info">
+                                <span className="metric-label-small">Broadcast</span>
+                                <span className="metric-value-large">Used</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {runResult.metrics.skew_detected && (
+                            <div className="metric-card badge-warning">
+                              <span className="metric-icon-large">⚠️</span>
+                              <div className="metric-info">
+                                <span className="metric-label-small">Skew</span>
+                                <span className="metric-value-large">Detected</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })}
+                          className="btn-show-report"
+                        >
+                          <span className="btn-icon">📊</span>
+                          <span>Show Report</span>
+                          <span className="btn-arrow">→</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="no-summary">
+                        <div className="no-summary-icon">📊</div>
+                        <h3>No Summary Available</h3>
+                        <p>Run your code first to see execution metrics</p>
                       </div>
                     )}
                   </div>
@@ -670,25 +893,6 @@ function PuzzleWorkspace() {
           </div>
         </div>
       </div>
-
-      {/* Collapsible Factory Visualization */}
-      {showVisualization && (
-        <div className="factory-visualization-panel">
-          <div className="visualization-header">
-            <h3>🏭 Factory Data Flow</h3>
-            <button onClick={() => setShowVisualization(false)} className="close-viz-btn">
-              ✕
-            </button>
-          </div>
-          <div className="visualization-content">
-            <ScenarioPanel
-              puzzle={puzzle}
-              isRunning={isRunning}
-              result={runResult}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
