@@ -1,23 +1,70 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { authService } from '../services/api';
 import './Header.css';
 
 function Header() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // TODO: Replace with actual auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
+
+  // Check authentication state on mount and when storage changes
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const isAuth = authService.isAuthenticated();
+      setIsLoggedIn(isAuth);
+      if (isAuth) {
+        const user = authService.getCurrentUser();
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+      }
+    };
+
+    checkAuthStatus();
+
+    // Listen for storage changes (for cross-tab synchronization)
+    window.addEventListener('storage', checkAuthStatus);
+
+    // Listen for custom auth change events (for same-tab updates)
+    window.addEventListener('authStateChanged', checkAuthStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkAuthStatus);
+      window.removeEventListener('authStateChanged', checkAuthStatus);
+    };
+  }, []);
 
   const handleLogin = () => {
-    // TODO: Implement actual login logic
-    setIsLoggedIn(true);
-    setShowUserMenu(false);
+    navigate('/signin');
   };
 
   const handleLogout = () => {
-    // TODO: Implement actual logout logic
+    authService.signOut();
     setIsLoggedIn(false);
+    setCurrentUser(null);
     setShowUserMenu(false);
+    navigate('/');
   };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   return (
     <header className="app-header-compact">
@@ -74,23 +121,29 @@ function Header() {
               <span className="login-text">Sign In</span>
             </button>
           ) : (
-            <div className="header-user-menu">
+            <div className="header-user-menu" ref={userMenuRef}>
               <button
                 className="header-user-btn"
                 onClick={() => setShowUserMenu(!showUserMenu)}
               >
                 <span className="user-avatar">👤</span>
-                <span className="user-name">User</span>
+                <span className="user-name">{currentUser?.username || 'User'}</span>
                 <span className="dropdown-arrow">{showUserMenu ? '▲' : '▼'}</span>
               </button>
 
               {showUserMenu && (
                 <div className="user-dropdown">
-                  <div className="dropdown-item" onClick={() => navigate('/profile')}>
+                  <div className="dropdown-item" onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/profile');
+                  }}>
                     <span className="dropdown-icon">👤</span>
                     <span>Profile</span>
                   </div>
-                  <div className="dropdown-item" onClick={() => navigate('/settings')}>
+                  <div className="dropdown-item" onClick={() => {
+                    setShowUserMenu(false);
+                    navigate('/settings');
+                  }}>
                     <span className="dropdown-icon">⚙️</span>
                     <span>Settings</span>
                   </div>

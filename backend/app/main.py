@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import puzzles, runs
+from app.api import puzzles, runs, auth
 
 app = FastAPI(
     title="Spark Playground API",
@@ -18,6 +18,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(puzzles.router, prefix="/api", tags=["puzzles"])
 app.include_router(runs.router, prefix="/api", tags=["runs"])
 

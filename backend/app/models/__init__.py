@@ -9,6 +9,8 @@ from .execution import (
     Node,
     SimulationEvent
 )
+from .user import User
+from .db_models import PuzzleRun, RunMetrics, ExecutionData, ExecutionPlan, RunOutput
 
 __all__ = [
     "Puzzle",
@@ -25,4 +27,10 @@ __all__ = [
     "Shuffle",
     "Node",
     "SimulationEvent",
+    "User",
+    "PuzzleRun",
+    "RunMetrics",
+    "ExecutionData",
+    "ExecutionPlan",
+    "RunOutput",
 ]

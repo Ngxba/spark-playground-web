@@ -121,7 +121,7 @@ function ExecutionInsights({ metrics, dagStructure }) {
             <span className="summary-icon">⏱️</span>
             <div className="summary-content">
               <div className="summary-label">Simulated Time</div>
-              <div className="summary-value">{metrics.time_simulated}s</div>
+              <div className="summary-value">{(metrics.time_simulated || 0).toFixed(1)}s</div>
               <div className="summary-description">
                 Estimated execution time based on operations
               </div>

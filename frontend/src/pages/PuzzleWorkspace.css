@@ -1709,7 +1709,7 @@
 }
 
 /* ============================================
-   SUMMARY TAB (COMPACT LEETCODE STYLE)
+   SUMMARY TAB (SIMPLE 3-LINE STYLE)
    ============================================ */
 
 .summary-panel {
@@ -1717,98 +1717,59 @@
   overflow-y: auto;
 }
 
-.summary-content-compact {
-  padding: 2rem;
-}
-
-/* Summary Metrics Grid */
-.summary-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.2rem;
-}
-
-.metric-card {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
+.summary-content-simple {
   padding: 1.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-base);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-primary);
-  box-shadow: 0 4px 16px rgba(0, 217, 255, 0.2);
-}
-
-.metric-icon-large {
-  font-size: 2.8rem;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(0, 217, 255, 0.3));
-}
-
-.metric-info {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  flex: 1;
+  gap: 0.8rem;
 }
 
-.metric-label-small {
+.summary-line {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-line:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
   color: var(--color-text-secondary);
+  font-weight: 600;
+  min-width: 140px;
+}
+
+.summary-value {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.summary-value.optimal {
+  color: var(--color-success);
+}
+
+.summary-badge {
+  padding: 0.25rem 0.6rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin-left: 0.5rem;
 }
 
-.metric-value-large {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1;
-  text-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
-}
-
-.metric-value-large.optimal {
-  color: var(--color-success);
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
-}
-
-/* Metric Card Badges */
-.metric-card.badge-success {
-  border-color: var(--color-success);
-  background: linear-gradient(135deg, rgba(57, 255, 20, 0.05), var(--color-surface));
-}
-
-.metric-card.badge-success:hover {
-  border-color: var(--color-success);
-  box-shadow: 0 4px 16px rgba(57, 255, 20, 0.2);
-}
-
-.metric-card.badge-success .metric-icon-large {
-  filter: drop-shadow(0 0 8px rgba(57, 255, 20, 0.3));
-}
-
-.metric-card.badge-warning {
+.summary-badge.warning {
   border-color: var(--color-warning);
-  background: linear-gradient(135deg, rgba(255, 149, 0, 0.05), var(--color-surface));
-}
-
-.metric-card.badge-warning:hover {
-  border-color: var(--color-warning);
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.2);
-}
-
-.metric-card.badge-warning .metric-icon-large {
-  filter: drop-shadow(0 0 8px rgba(255, 149, 0, 0.3));
+  color: var(--color-warning);
 }
 
 .badge-warning {
@@ -1914,21 +1875,19 @@
 }
 
 /* ============================================
-   SHOW REPORT BUTTON
+   SHOW REPORT BUTTON (Tab Level)
    ============================================ */
 
-.btn-show-report {
-  width: 100%;
+.btn-show-report-tab {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding: 1.2rem 2rem;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  margin-left: auto;
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  border: 2px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 700;
   font-family: 'Rajdhani', sans-serif;
   text-transform: uppercase;
@@ -1936,26 +1895,22 @@
   color: var(--color-bg-dark);
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 4px 16px rgba(0, 217, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 217, 255, 0.3);
+  white-space: nowrap;
 }
 
-.btn-show-report:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 32px rgba(0, 217, 255, 0.5);
-  border-color: var(--color-secondary);
+.btn-show-report-tab:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 217, 255, 0.5);
 }
 
-.btn-icon {
-  font-size: 1.3rem;
+.btn-show-report-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.btn-arrow {
-  font-size: 1.3rem;
-  transition: transform var(--transition-base);
-}
-
-.btn-show-report:hover .btn-arrow {
-  transform: translateX(6px);
+.btn-show-report-tab .btn-icon {
+  font-size: 1rem;
 }
 
 /* ============================================
@@ -1963,66 +1918,56 @@
    ============================================ */
 
 @media (max-width: 768px) {
-  .summary-content-compact {
+  .summary-content-simple {
     padding: 1rem;
   }
 
-  .summary-metrics-grid {
-    grid-template-columns: 1fr;
-    gap: 0.8rem;
+  .summary-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
   }
 
-  .metric-card {
-    padding: 1.2rem;
+  .summary-label {
+    min-width: auto;
   }
 
-  .metric-icon-large {
-    font-size: 2.2rem;
-  }
-
-  .metric-value-large {
-    font-size: 1.8rem;
-  }
-
-  .btn-show-report {
-    padding: 1rem 1.5rem;
-    font-size: 0.95rem;
+  .btn-show-report-tab {
+    padding: 0.7rem 1.2rem;
+    font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  .summary-metrics-grid {
-    gap: 0.6rem;
+  .summary-content-simple {
+    padding: 0.8rem;
   }
 
-  .metric-card {
-    padding: 1rem;
-    gap: 0.8rem;
+  .summary-line {
+    padding: 0.5rem 0;
+    font-size: 13px;
   }
 
-  .metric-icon-large {
-    font-size: 1.8rem;
+  .summary-value {
+    font-size: 15px;
   }
 
-  .metric-label-small {
-    font-size: 0.7rem;
+  .summary-badge {
+    font-size: 10px;
+    padding: 0.2rem 0.5rem;
   }
 
-  .metric-value-large {
-    font-size: 1.5rem;
+  .btn-show-report-tab {
+    padding: 0.6rem 1rem;
+    font-size: 11px;
+    gap: 0.3rem;
   }
 
-  .btn-show-report {
-    padding: 0.9rem 1.2rem;
+  .btn-show-report-tab .btn-icon {
     font-size: 0.9rem;
-    gap: 0.5rem;
   }
 
-  .btn-icon {
-    font-size: 1.1rem;
-  }
-
-  .btn-arrow {
-    font-size: 1.1rem;
+  .btn-show-report-tab span:not(.btn-icon) {
+    display: none;
   }
 }

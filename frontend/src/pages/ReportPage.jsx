@@ -172,7 +172,7 @@ function ReportPage() {
                     <div className="metric">
                       <span className="metric-label">⏱️ Time</span>
                       <span className="metric-value">
-                        {result.metrics.time_simulated}s
+                        {(result.execution_simulation?.total_duration || result.metrics?.time_simulated || 0).toFixed(1)}s
                       </span>
                     </div>
 

@@ -666,6 +666,14 @@ function PuzzleWorkspace() {
                 >
                   Console
                 </button>
+                <button
+                  onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })}
+                  className="btn-show-report-tab"
+                  disabled={!runResult || isRunning}
+                >
+                  <span className="btn-icon">📊</span>
+                  <span>Show Report</span>
+                </button>
               </div>
 
               <div className="bottom-panel-content">
@@ -795,73 +803,26 @@ function PuzzleWorkspace() {
                 {bottomTab === 'summary' && (
                   <div className="summary-panel">
                     {runResult && runResult.metrics ? (
-                      <div className="summary-content-compact">
-                        <div className="summary-metrics-grid">
-                          <div className="metric-card">
-                            <span className="metric-icon-large">🔁</span>
-                            <div className="metric-info">
-                              <span className="metric-label-small">Shuffles</span>
-                              <span className={`metric-value-large ${runResult.metrics.shuffles === 0 ? 'optimal' : ''}`}>
-                                {runResult.metrics.shuffles || 0}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="metric-card">
-                            <span className="metric-icon-large">🏭</span>
-                            <div className="metric-info">
-                              <span className="metric-label-small">Stages</span>
-                              <span className="metric-value-large">{runResult.metrics.stages || 0}</span>
-                            </div>
-                          </div>
-
-                          <div className="metric-card">
-                            <span className="metric-icon-large">⚡</span>
-                            <div className="metric-info">
-                              <span className="metric-label-small">Time</span>
-                              <span className="metric-value-large">{runResult.metrics.time_simulated || 0}s</span>
-                            </div>
-                          </div>
-
-                          {runResult.metrics.cache_used && (
-                            <div className="metric-card badge-success">
-                              <span className="metric-icon-large">💾</span>
-                              <div className="metric-info">
-                                <span className="metric-label-small">Cache</span>
-                                <span className="metric-value-large">Used</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {runResult.metrics.broadcast_used && (
-                            <div className="metric-card badge-success">
-                              <span className="metric-icon-large">📡</span>
-                              <div className="metric-info">
-                                <span className="metric-label-small">Broadcast</span>
-                                <span className="metric-value-large">Used</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {runResult.metrics.skew_detected && (
-                            <div className="metric-card badge-warning">
-                              <span className="metric-icon-large">⚠️</span>
-                              <div className="metric-info">
-                                <span className="metric-label-small">Skew</span>
-                                <span className="metric-value-large">Detected</span>
-                              </div>
-                            </div>
-                          )}
+                      <div className="summary-content-simple">
+                        <div className="summary-line">
+                          <span className="summary-label">Shuffles:</span>
+                          <span className={`summary-value ${runResult.metrics.shuffles === 0 ? 'optimal' : ''}`}>
+                            {runResult.metrics.shuffles || 0}
+                          </span>
+                          {runResult.metrics.cache_used && <span className="summary-badge">Cache Used</span>}
+                          {runResult.metrics.broadcast_used && <span className="summary-badge">Broadcast</span>}
                         </div>
-
-                        <button
-                          onClick={() => navigate(`/puzzle/${puzzleId}/report`, { state: { result: runResult } })}
-                          className="btn-show-report"
-                        >
-                          <span className="btn-icon">📊</span>
-                          <span>Show Report</span>
-                          <span className="btn-arrow">→</span>
-                        </button>
+                        <div className="summary-line">
+                          <span className="summary-label">Stages:</span>
+                          <span className="summary-value">{runResult.metrics.stages || 0}</span>
+                        </div>
+                        <div className="summary-line">
+                          <span className="summary-label">Execution Time:</span>
+                          <span className="summary-value">
+                            {(runResult.execution_simulation?.total_duration || runResult.metrics?.time_simulated || 0).toFixed(1)}s
+                          </span>
+                          {runResult.metrics.skew_detected && <span className="summary-badge warning">Skew Detected</span>}
+                        </div>
                       </div>
                     ) : (
                       <div className="no-summary">
