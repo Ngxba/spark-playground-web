@@ -133,6 +133,7 @@
 }
 
 .calendar-day {
+  padding: 0 10px;
   aspect-ratio: 1;
   display: flex;
   align-items: center;

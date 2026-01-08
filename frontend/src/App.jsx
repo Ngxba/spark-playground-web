@@ -4,6 +4,8 @@ import PuzzleList from './pages/PuzzleList';
 import PuzzleWorkspace from './pages/PuzzleWorkspace';
 import ReportPage from './pages/ReportPage';
 import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -27,6 +29,8 @@ function AppContent() {
             <Route path="/puzzles" element={<PuzzleList />} />
             <Route path="/puzzle/:puzzleId" element={<PuzzleWorkspace />} />
             <Route path="/puzzle/:puzzleId/report" element={<ReportPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
         {showSidebars && <RightSidebar />}

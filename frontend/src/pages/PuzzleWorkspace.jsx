@@ -24,6 +24,7 @@ function PuzzleWorkspace() {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showExpectedOutput, setShowExpectedOutput] = useState(false);
+  const [visibleExpectedRows, setVisibleExpectedRows] = useState(10);
 
   // Submissions State
   const [submissions, setSubmissions] = useState([]);
@@ -381,7 +382,12 @@ function PuzzleWorkspace() {
                   <h3 className="section-title">🎯 Expected Result</h3>
                   <button
                     className="toggle-expected-btn"
-                    onClick={() => setShowExpectedOutput(!showExpectedOutput)}
+                    onClick={() => {
+                      setShowExpectedOutput(!showExpectedOutput);
+                      if (!showExpectedOutput) {
+                        setVisibleExpectedRows(10); // Reset to 10 rows when opening
+                      }
+                    }}
                   >
                     {showExpectedOutput ? 'Hide' : 'Show'} Example Output
                   </button>
@@ -398,7 +404,7 @@ function PuzzleWorkspace() {
                               </tr>
                             </thead>
                             <tbody>
-                              {puzzle.expected_output.slice(0, 3).map((row, idx) => (
+                              {puzzle.expected_output.slice(0, visibleExpectedRows).map((row, idx) => (
                                 <tr key={idx}>
                                   {Object.values(row).map((val, i) => (
                                     <td key={i}>{String(val)}</td>
@@ -407,9 +413,31 @@ function PuzzleWorkspace() {
                               ))}
                             </tbody>
                           </table>
-                          {puzzle.expected_output.length > 3 && (
-                            <div className="more-rows-note">
-                              ... and {puzzle.expected_output.length - 3} more rows
+                          {(puzzle.expected_output.length > 10 || visibleExpectedRows > 10) && (
+                            <div className="more-rows-controls">
+                              {puzzle.expected_output.length > visibleExpectedRows && (
+                                <>
+                                  <div className="more-rows-note">
+                                    ... and {puzzle.expected_output.length - visibleExpectedRows} more rows
+                                  </div>
+                                  <button
+                                    className="btn-show-more-rows"
+                                    onClick={() => setVisibleExpectedRows(prev => Math.min(prev + 10, puzzle.expected_output.length))}
+                                  >
+                                    <span className="btn-icon">▼</span>
+                                    Show 10 More
+                                  </button>
+                                </>
+                              )}
+                              {visibleExpectedRows > 10 && (
+                                <button
+                                  className="btn-show-less-rows"
+                                  onClick={() => setVisibleExpectedRows(10)}
+                                >
+                                  <span className="btn-icon">▲</span>
+                                  Show Less
+                                </button>
+                              )}
                             </div>
                           )}
                         </>

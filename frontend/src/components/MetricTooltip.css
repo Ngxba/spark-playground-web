@@ -165,15 +165,3 @@
   border-radius: 4px;
   border-left: 3px solid #28a745;
 }
-
-/* Adjust position for edge cases */
-.metric-tooltip-container:first-child .metric-tooltip {
-  left: 0;
-  transform: translateX(0);
-}
-
-.metric-tooltip-container:last-child .metric-tooltip {
-  left: auto;
-  right: 0;
-  transform: translateX(0);
-}
