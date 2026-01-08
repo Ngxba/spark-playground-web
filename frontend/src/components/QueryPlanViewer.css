@@ -1,0 +1,149 @@
+.query-plan-viewer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-view-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+}
+
+.plan-tab {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.plan-tab:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.plan-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.plan-view-content {
+  flex: 1;
+  overflow: auto;
+  padding: 0 0.5rem;
+}
+
+.visual-dag {
+  height: 100%;
+  min-height: 400px;
+}
+
+.plan-text {
+  height: 100%;
+}
+
+.plan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-color {
+  width: 20px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-color.broadcast {
+  background: #d4edda;
+  border: 1px solid #28a745;
+}
+
+.legend-color.shuffle {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+}
+
+.legend-color.filter {
+  background: #d1ecf1;
+  border: 1px solid #17a2b8;
+}
+
+.legend-color.aggregate {
+  background: #e2e3e5;
+  border: 1px solid #6c757d;
+}
+
+.plan-content {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.plan-line {
+  padding: 2px 0;
+}
+
+.broadcast-op {
+  background: linear-gradient(90deg, rgba(40, 167, 69, 0.15) 0%, transparent 100%);
+  color: #155724;
+  font-weight: 500;
+}
+
+.shuffle-op {
+  background: linear-gradient(90deg, rgba(255, 193, 7, 0.2) 0%, transparent 100%);
+  color: #856404;
+  font-weight: 500;
+}
+
+.filter-op {
+  background: linear-gradient(90deg, rgba(23, 162, 184, 0.1) 0%, transparent 100%);
+  color: #0c5460;
+}
+
+.aggregate-op {
+  background: linear-gradient(90deg, rgba(108, 117, 125, 0.1) 0%, transparent 100%);
+  color: #383d41;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.no-data-detailed {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.no-data-detailed .hint {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.5rem;
+}

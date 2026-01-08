@@ -1,0 +1,452 @@
+{
+  "total_duration": 0.2,
+  "partition_count": 10,
+  "node_count": 4,
+  "cores_per_node": 4,
+  "total_cores": 16,
+  "stages": [
+    {
+      "id": 0,
+      "name": "Project + Sort + Exchange...",
+      "operation_type": "scan",
+      "start_time": 0.0,
+      "end_time": 0.2,
+      "tasks": [
+        {
+          "id": 0,
+          "partition_id": 0,
+          "node_id": 0,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 1,
+          "partition_id": 1,
+          "node_id": 1,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 2,
+          "partition_id": 2,
+          "node_id": 2,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 3,
+          "partition_id": 3,
+          "node_id": 3,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 4,
+          "partition_id": 4,
+          "node_id": 0,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 5,
+          "partition_id": 5,
+          "node_id": 1,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 6,
+          "partition_id": 6,
+          "node_id": 2,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 7,
+          "partition_id": 7,
+          "node_id": 3,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 8,
+          "partition_id": 8,
+          "node_id": 0,
+          "core_id": 2,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        },
+        {
+          "id": 9,
+          "partition_id": 9,
+          "node_id": 1,
+          "core_id": 2,
+          "start_time": 0.0,
+          "end_time": 0.2,
+          "duration": 0.2,
+          "status": "completed"
+        }
+      ],
+      "dependencies": [],
+      "parallelism": 10,
+      "status": "completed"
+    }
+  ],
+  "partitions": [
+    {
+      "id": 0,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 1,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 2,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 3,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 4,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 5,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 6,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 7,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 8,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    },
+    {
+      "id": 9,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": []
+    }
+  ],
+  "shuffles": [],
+  "nodes": [
+    {
+      "id": 0,
+      "name": "Worker 1",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        0,
+        4,
+        8
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Worker 2",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        1,
+        5,
+        9
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Worker 3",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        2,
+        6
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Worker 4",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        3,
+        7
+      ]
+    }
+  ],
+  "events": [
+    {
+      "time": 0.0,
+      "event_type": "stage_start",
+      "stage_id": 0,
+      "task_id": null,
+      "details": {
+        "name": "Project + Sort + Exchange..."
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 0,
+      "details": {
+        "partition": 0,
+        "node": 0
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 1,
+      "details": {
+        "partition": 1,
+        "node": 1
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 2,
+      "details": {
+        "partition": 2,
+        "node": 2
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 3,
+      "details": {
+        "partition": 3,
+        "node": 3
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 4,
+      "details": {
+        "partition": 4,
+        "node": 0
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 5,
+      "details": {
+        "partition": 5,
+        "node": 1
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 6,
+      "details": {
+        "partition": 6,
+        "node": 2
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 7,
+      "details": {
+        "partition": 7,
+        "node": 3
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 8,
+      "details": {
+        "partition": 8,
+        "node": 0
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 9,
+      "details": {
+        "partition": 9,
+        "node": 1
+      }
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 0,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 1,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 2,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 3,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 4,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 5,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 6,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 7,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 8,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 9,
+      "details": null
+    },
+    {
+      "time": 0.2,
+      "event_type": "stage_end",
+      "stage_id": 0,
+      "task_id": null,
+      "details": null
+    }
+  ],
+  "metrics": {
+    "total_stages": 1,
+    "total_tasks": 10,
+    "total_shuffles": 0,
+    "avg_parallelism": 10.0
+  }
+}

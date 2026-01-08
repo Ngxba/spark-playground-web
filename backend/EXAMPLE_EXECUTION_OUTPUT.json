@@ -1,0 +1,839 @@
+{
+  "total_duration": 1.2,
+  "partition_count": 15,
+  "node_count": 4,
+  "cores_per_node": 4,
+  "total_cores": 16,
+  "stages": [
+    {
+      "id": 0,
+      "name": "Scan + Filter",
+      "operation_type": "scan",
+      "start_time": 0.0,
+      "end_time": 0.5,
+      "tasks": [
+        {
+          "id": 0,
+          "partition_id": 0,
+          "node_id": 0,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 1,
+          "partition_id": 1,
+          "node_id": 1,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 2,
+          "partition_id": 2,
+          "node_id": 2,
+          "core_id": 2,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 3,
+          "partition_id": 3,
+          "node_id": 3,
+          "core_id": 3,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 4,
+          "partition_id": 4,
+          "node_id": 0,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 5,
+          "partition_id": 5,
+          "node_id": 1,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 6,
+          "partition_id": 6,
+          "node_id": 2,
+          "core_id": 2,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 7,
+          "partition_id": 7,
+          "node_id": 3,
+          "core_id": 3,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 8,
+          "partition_id": 8,
+          "node_id": 0,
+          "core_id": 0,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        },
+        {
+          "id": 9,
+          "partition_id": 9,
+          "node_id": 1,
+          "core_id": 1,
+          "start_time": 0.0,
+          "end_time": 0.5,
+          "duration": 0.5,
+          "status": "completed"
+        }
+      ],
+      "dependencies": [],
+      "parallelism": 10,
+      "status": "completed"
+    },
+    {
+      "id": 1,
+      "name": "HashAggregate",
+      "operation_type": "aggregate",
+      "start_time": 0.8,
+      "end_time": 1.2,
+      "tasks": [
+        {
+          "id": 10,
+          "partition_id": 10,
+          "node_id": 0,
+          "core_id": 1,
+          "start_time": 0.8,
+          "end_time": 1.2,
+          "duration": 0.4,
+          "status": "completed"
+        },
+        {
+          "id": 11,
+          "partition_id": 11,
+          "node_id": 1,
+          "core_id": 2,
+          "start_time": 0.8,
+          "end_time": 1.2,
+          "duration": 0.4,
+          "status": "completed"
+        },
+        {
+          "id": 12,
+          "partition_id": 12,
+          "node_id": 2,
+          "core_id": 3,
+          "start_time": 0.8,
+          "end_time": 1.2,
+          "duration": 0.4,
+          "status": "completed"
+        },
+        {
+          "id": 13,
+          "partition_id": 13,
+          "node_id": 3,
+          "core_id": 0,
+          "start_time": 0.8,
+          "end_time": 1.2,
+          "duration": 0.4,
+          "status": "completed"
+        },
+        {
+          "id": 14,
+          "partition_id": 14,
+          "node_id": 0,
+          "core_id": 1,
+          "start_time": 0.8,
+          "end_time": 1.2,
+          "duration": 0.4,
+          "status": "completed"
+        }
+      ],
+      "dependencies": [
+        0
+      ],
+      "parallelism": 5,
+      "status": "completed"
+    }
+  ],
+  "partitions": [
+    {
+      "id": 0,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 1,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 2,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 3,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 4,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 5,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 6,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 7,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 8,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 9,
+      "size_mb": 2.5,
+      "records_count": 1000,
+      "data_preview": null,
+      "stage_id": 0,
+      "parent_partitions": [],
+      "child_partitions": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 10,
+      "size_mb": 5.0,
+      "records_count": 500,
+      "data_preview": null,
+      "stage_id": 1,
+      "parent_partitions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "child_partitions": []
+    },
+    {
+      "id": 11,
+      "size_mb": 5.0,
+      "records_count": 500,
+      "data_preview": null,
+      "stage_id": 1,
+      "parent_partitions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "child_partitions": []
+    },
+    {
+      "id": 12,
+      "size_mb": 5.0,
+      "records_count": 500,
+      "data_preview": null,
+      "stage_id": 1,
+      "parent_partitions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "child_partitions": []
+    },
+    {
+      "id": 13,
+      "size_mb": 5.0,
+      "records_count": 500,
+      "data_preview": null,
+      "stage_id": 1,
+      "parent_partitions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "child_partitions": []
+    },
+    {
+      "id": 14,
+      "size_mb": 5.0,
+      "records_count": 500,
+      "data_preview": null,
+      "stage_id": 1,
+      "parent_partitions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "child_partitions": []
+    }
+  ],
+  "shuffles": [
+    {
+      "from_stage_id": 0,
+      "to_stage_id": 1,
+      "data_volume_mb": 25.0,
+      "from_partitions": 10,
+      "to_partitions": 5,
+      "start_time": 0.5,
+      "end_time": 0.8,
+      "partition_mapping": {
+        "0": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "1": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "2": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "3": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "4": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "5": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "6": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "7": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "8": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "9": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": 0,
+      "name": "Worker 1",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        0,
+        1,
+        10,
+        11
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Worker 2",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        2,
+        3,
+        12,
+        13
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Worker 3",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        4,
+        5,
+        14
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Worker 4",
+      "cores": 4,
+      "memory_gb": 4.0,
+      "assigned_tasks": [
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  ],
+  "events": [
+    {
+      "time": 0.0,
+      "event_type": "stage_start",
+      "stage_id": 0,
+      "task_id": null,
+      "details": {
+        "name": "Scan + Filter"
+      }
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 0,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 0,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 1,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 1,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 2,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 2,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 3,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 3,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 4,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 4,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 5,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 5,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 6,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 6,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 7,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 7,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 8,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 8,
+      "details": null
+    },
+    {
+      "time": 0.0,
+      "event_type": "task_start",
+      "stage_id": 0,
+      "task_id": 9,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "task_end",
+      "stage_id": 0,
+      "task_id": 9,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "stage_end",
+      "stage_id": 0,
+      "task_id": null,
+      "details": null
+    },
+    {
+      "time": 0.5,
+      "event_type": "shuffle_start",
+      "stage_id": null,
+      "task_id": null,
+      "details": {
+        "from_stage": 0,
+        "to_stage": 1
+      }
+    },
+    {
+      "time": 0.8,
+      "event_type": "shuffle_end",
+      "stage_id": null,
+      "task_id": null,
+      "details": {
+        "from_stage": 0,
+        "to_stage": 1
+      }
+    },
+    {
+      "time": 0.8,
+      "event_type": "stage_start",
+      "stage_id": 1,
+      "task_id": null,
+      "details": {
+        "name": "HashAggregate"
+      }
+    },
+    {
+      "time": 0.8,
+      "event_type": "task_start",
+      "stage_id": 1,
+      "task_id": 10,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "task_end",
+      "stage_id": 1,
+      "task_id": 10,
+      "details": null
+    },
+    {
+      "time": 0.8,
+      "event_type": "task_start",
+      "stage_id": 1,
+      "task_id": 11,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "task_end",
+      "stage_id": 1,
+      "task_id": 11,
+      "details": null
+    },
+    {
+      "time": 0.8,
+      "event_type": "task_start",
+      "stage_id": 1,
+      "task_id": 12,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "task_end",
+      "stage_id": 1,
+      "task_id": 12,
+      "details": null
+    },
+    {
+      "time": 0.8,
+      "event_type": "task_start",
+      "stage_id": 1,
+      "task_id": 13,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "task_end",
+      "stage_id": 1,
+      "task_id": 13,
+      "details": null
+    },
+    {
+      "time": 0.8,
+      "event_type": "task_start",
+      "stage_id": 1,
+      "task_id": 14,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "task_end",
+      "stage_id": 1,
+      "task_id": 14,
+      "details": null
+    },
+    {
+      "time": 1.2,
+      "event_type": "stage_end",
+      "stage_id": 1,
+      "task_id": null,
+      "details": null
+    }
+  ],
+  "metrics": {
+    "total_stages": 2,
+    "total_tasks": 15,
+    "total_shuffles": 1,
+    "avg_parallelism": 7.5
+  }
+}

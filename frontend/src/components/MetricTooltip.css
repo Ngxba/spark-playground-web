@@ -1,0 +1,167 @@
+.metric-tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.metric-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  width: 350px;
+  max-width: 90vw;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 1rem;
+  z-index: 1000;
+  animation: tooltipFadeIn 0.2s ease;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.metric-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-bottom-color: white;
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tooltip-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.tooltip-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.tooltip-close:hover {
+  color: #333;
+}
+
+.tooltip-description {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.tooltip-tips {
+  margin-bottom: 1rem;
+}
+
+.tooltip-tips h5 {
+  font-size: 0.85rem;
+  color: #667eea;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.tooltip-tips ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.tooltip-tips li {
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.tooltip-example {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 0.75rem;
+}
+
+.example-toggle {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s;
+}
+
+.example-toggle:hover {
+  color: #5566d6;
+}
+
+.example-content {
+  margin-top: 0.75rem;
+}
+
+.example-code {
+  margin-bottom: 0.75rem;
+}
+
+.example-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.example-code pre {
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #1a1d23;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.example-improvement {
+  font-size: 0.8rem;
+  color: #28a745;
+  padding: 0.5rem;
+  background: rgba(40, 167, 69, 0.05);
+  border-radius: 4px;
+  border-left: 3px solid #28a745;
+}
