@@ -3,9 +3,11 @@
    ============================================ */
 
 .settings-page {
-  min-height: calc(100vh - 60px);
   background: var(--color-bg-darker);
-  /* padding: 2rem; */
+  margin: -2rem;
+  padding: 2rem;
+  height: calc(100% + 4rem);
+  overflow-y: auto;
 }
 
 .settings-container {

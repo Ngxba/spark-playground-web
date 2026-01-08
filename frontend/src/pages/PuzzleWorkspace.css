@@ -2,7 +2,9 @@
 .workspace-modern {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  margin: -2rem;
+  padding: 2rem;
+  height: calc(100% + 4rem);
   background: var(--color-bg-darker);
   overflow: hidden;
 }
@@ -14,7 +16,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 100%;
   gap: 24px;
 }
 

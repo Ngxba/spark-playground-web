@@ -6,11 +6,13 @@
 /* Page Container */
 .report-page-container {
   width: 100%;
-  min-height: 100vh;
   background: var(--color-bg-darker);
   padding: 0;
   position: relative;
-  overflow: hidden;
+  margin: -2rem;
+  padding: 2rem;
+  height: calc(100% + 4rem);
+  overflow-y: auto;
 }
 
 .report-page-container::before {
@@ -44,7 +46,7 @@
     inset 0 0 60px rgba(0, 217, 255, 0.03);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
   position: relative;
   z-index: 2;
 }
