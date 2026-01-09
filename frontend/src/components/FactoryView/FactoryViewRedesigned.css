@@ -934,24 +934,6 @@
   pointer-events: none;
 }
 
-.fv-queue-partition-check {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 16px;
-  height: 16px;
-  background: var(--fv-emerald-success);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: var(--fv-deep-space);
-  font-weight: 900;
-  z-index: 3;
-  box-shadow: 0 2px 8px rgba(46, 204, 113, 0.6);
-}
-
 @keyframes queuePartitionPulse {
   0%, 100% {
     box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
