@@ -3,38 +3,46 @@ import TimelineController from './TimelineController';
 import ClusterView from './ClusterView';
 import StageFlow from './StageFlow';
 import LiveMetrics from './LiveMetrics';
-// import ParticleAnimationEngine from './animations/ParticleAnimationEngine'; // DISABLED
 import ExecutionDiagram from './ExecutionDiagram';
 import './FactoryView.css';
 
 /**
  * FactoryView - Live Spark Execution Simulator
- *
- * Visualizes Spark execution step-by-step showing partitions, stages,
- * shuffles, and parallelism in action.
+ * REDESIGNED: Technical Blueprint Aesthetic
  */
 function FactoryView({ simulationData }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentState, setCurrentState] = useState(null);
-  const [partitionPositions, setPartitionPositions] = useState({});
-  const [selectedStageIndex, setSelectedStageIndex] = useState(0); // Shared stage selection
-
-  // Debug logging
-  console.log('FactoryView - simulationData:', simulationData);
+  const [selectedStageIndex, setSelectedStageIndex] = useState(0);
 
   // If no simulation data, show message
   if (!simulationData) {
     return (
       <div className="factory-view-empty">
         <div className="empty-state">
-          <h3>No Execution Simulation Available</h3>
+          <div className="empty-icon">⚡</div>
+          <h3>No Execution Data</h3>
           <p>
-            Run your code to see a live visualization of how Spark executes it.
-            You'll see partitions flowing through stages, tasks running on nodes,
-            and data shuffling across the cluster.
+            Execute a Spark query to visualize the distributed execution process.
+            The factory view will show stages, partitions, tasks, executors, and data flow
+            in real-time as your query processes across the cluster.
           </p>
+          <div className="empty-features">
+            <div className="empty-feature">
+              <div className="feature-label">Stage Flow</div>
+              <div className="feature-desc">See how stages execute sequentially</div>
+            </div>
+            <div className="empty-feature">
+              <div className="feature-label">Partition Tracking</div>
+              <div className="feature-desc">Watch tasks process individual partitions</div>
+            </div>
+            <div className="empty-feature">
+              <div className="feature-label">Executor View</div>
+              <div className="feature-desc">Monitor resource utilization</div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -52,40 +60,9 @@ function FactoryView({ simulationData }) {
   // Calculate current execution state based on currentTime
   useEffect(() => {
     if (!simulationData) return;
-
     const state = calculateExecutionState(currentTime, simulationData);
     setCurrentState(state);
   }, [currentTime, simulationData]);
-
-  // Calculate partition positions for particle animation
-  useEffect(() => {
-    if (!simulationData) return;
-
-    const positions = {};
-    const { partitions, stages } = simulationData;
-
-    // Group partitions by stage
-    const partsByStage = {};
-    partitions.forEach(p => {
-      if (!partsByStage[p.stage_id]) partsByStage[p.stage_id] = [];
-      partsByStage[p.stage_id].push(p);
-    });
-
-    // Calculate positions
-    stages.forEach((stage, stageIdx) => {
-      const stageX = 100 + stageIdx * 250;
-      const stageParts = partsByStage[stage.id] || [];
-
-      stageParts.forEach((partition, partIdx) => {
-        positions[partition.id] = {
-          x: stageX + 125,
-          y: 150 + partIdx * 40,
-        };
-      });
-    });
-
-    setPartitionPositions(positions);
-  }, [simulationData]);
 
   // Animation loop
   useEffect(() => {
@@ -93,14 +70,14 @@ function FactoryView({ simulationData }) {
 
     const interval = setInterval(() => {
       setCurrentTime((prevTime) => {
-        const nextTime = prevTime + (0.016 * playbackSpeed); // 60fps
+        const nextTime = prevTime + (0.016 * playbackSpeed);
         if (nextTime >= total_duration) {
           setIsPlaying(false);
           return total_duration;
         }
         return nextTime;
       });
-    }, 16); // 60fps
+    }, 16);
 
     return () => clearInterval(interval);
   }, [isPlaying, playbackSpeed, total_duration]);
@@ -109,11 +86,8 @@ function FactoryView({ simulationData }) {
     setCurrentTime(time);
   };
 
-  // Handle stage selection - updates both selected stage and seeks to stage start time
   const handleStageSelect = (stageIndex) => {
     setSelectedStageIndex(stageIndex);
-
-    // Find the stage's start time from events
     const stage = stages[stageIndex];
     if (stage && events) {
       const stageStartEvent = events.find(
@@ -121,14 +95,73 @@ function FactoryView({ simulationData }) {
       );
       if (stageStartEvent) {
         setCurrentTime(stageStartEvent.time);
-        setIsPlaying(false); // Pause playback when manually selecting a stage
+        setIsPlaying(false);
       }
     }
   };
 
+  const togglePlayback = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleSpeedChange = (speed) => {
+    setPlaybackSpeed(speed);
+  };
+
+  const handleReset = () => {
+    setCurrentTime(0);
+    setIsPlaying(false);
+  };
+
   return (
     <div className="factory-view">
-      {/* [A1] Timeline Visualization */}
+      {/* Animated background effect */}
+      <div className="factory-bg-animation"></div>
+
+      {/* Header Controls */}
+      <div className="factory-header">
+        <div className="factory-header-left">
+          <div className="factory-title">
+            <span className="title-icon">⚡</span>
+            <span className="title-text">EXECUTION FACTORY</span>
+          </div>
+          <div className="factory-subtitle">
+            Real-time distributed execution visualization
+          </div>
+        </div>
+
+        <div className="factory-header-right">
+          <div className="playback-controls">
+            <button
+              className="control-btn control-reset"
+              onClick={handleReset}
+              title="Reset to start"
+            >
+              ↺ Reset
+            </button>
+            <button
+              className={`control-btn control-play ${isPlaying ? 'playing' : ''}`}
+              onClick={togglePlayback}
+            >
+              {isPlaying ? '⏸ Pause' : '▶ Play'}
+            </button>
+            <div className="speed-selector">
+              <span className="speed-label">Speed:</span>
+              {[0.5, 1, 2, 4].map(speed => (
+                <button
+                  key={speed}
+                  className={`speed-btn ${playbackSpeed === speed ? 'active' : ''}`}
+                  onClick={() => handleSpeedChange(speed)}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline */}
       <TimelineController
         currentTime={currentTime}
         totalDuration={total_duration}
@@ -139,48 +172,45 @@ function FactoryView({ simulationData }) {
         onStageSelect={handleStageSelect}
       />
 
-      {/* [A2] Detailed Execution Diagram */}
-      <ExecutionDiagram
-        simulationData={simulationData}
-        currentState={currentState}
-        selectedStageIndex={selectedStageIndex}
-        onStageSelect={handleStageSelect}
-      />
+      {/* Main Content Grid */}
+      <div className="factory-content">
+        {/* Left Column: Execution Diagram */}
+        <div className="factory-main">
+          <ExecutionDiagram
+            simulationData={simulationData}
+            currentState={currentState}
+            selectedStageIndex={selectedStageIndex}
+            onStageSelect={handleStageSelect}
+          />
+        </div>
 
-      {/* [A3] Main Visualization Area */}
-      <div className="factory-canvas" style={{ position: 'relative' }}>
-        {/* [A3.1] Cluster View - Shows worker nodes */}
-        <ClusterView
-          nodes={nodes}
-          currentState={currentState}
-          stages={stages}
-        />
+        {/* Right Column: Live Metrics & Cluster View */}
+        <div className="factory-sidebar">
+          <LiveMetrics
+            currentState={currentState}
+            metrics={metrics}
+            partitionCount={partitions?.length || 0}
+          />
 
-        {/* [A3.2] Stage Flow - Shows stages and their progress */}
-        <StageFlow
-          stages={stages}
-          shuffles={shuffles}
-          currentState={currentState}
-          selectedStageIndex={selectedStageIndex}
-          onStageClick={handleStageSelect}
-        />
+          <div className="cluster-container">
+            <ClusterView
+              nodes={nodes}
+              currentState={currentState}
+              stages={stages}
+            />
+          </div>
 
-        {/* [A3.3] Particle Animation Overlay - DISABLED */}
-        {/* <ParticleAnimationEngine
-          simulationData={simulationData}
-          currentTime={currentTime}
-          isPlaying={isPlaying}
-          playbackSpeed={playbackSpeed}
-          partitionPositions={partitionPositions}
-        /> */}
+          <div className="stage-flow-container">
+            <StageFlow
+              stages={stages}
+              shuffles={shuffles}
+              currentState={currentState}
+              selectedStageIndex={selectedStageIndex}
+              onStageClick={handleStageSelect}
+            />
+          </div>
+        </div>
       </div>
-
-      {/* [A4] Live Metrics Panel */}
-      <LiveMetrics
-        currentState={currentState}
-        metrics={metrics}
-        partitionCount={partitions?.length || 0}
-      />
     </div>
   );
 }
@@ -197,7 +227,6 @@ function calculateExecutionState(time, simulationData) {
   const activeShuffles = [];
   const tasksByNode = {};
 
-  // Initialize task tracking per node
   nodes.forEach(node => {
     tasksByNode[node.id] = {
       active: [],
@@ -205,7 +234,6 @@ function calculateExecutionState(time, simulationData) {
     };
   });
 
-  // Process all events up to current time
   events.forEach(event => {
     if (event.time > time) return;
 

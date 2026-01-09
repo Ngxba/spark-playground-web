@@ -1,7 +1,28 @@
 .timeline-controller {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 16px 24px 20px;
+  background: var(--factory-bg-surface);
+  border-bottom: 1px solid var(--factory-border-bright);
+  padding: var(--spacing-md) var(--spacing-lg);
+  position: relative;
+  overflow: visible;
+  z-index: 9;
+  flex-shrink: 0;
+}
+
+/* Technical scanline effect */
+.timeline-controller::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--factory-accent-cyan) 50%,
+    transparent 100%
+  );
+  opacity: 0.5;
+  animation: scanline 3s linear infinite;
 }
 
 /* Header with time display */
@@ -9,64 +30,78 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
   padding: 0 4px;
 }
 
 .time-display {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  font-size: 14px;
+  gap: var(--spacing-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
 .time-label {
-  color: #6b7280;
+  color: var(--factory-text-tertiary);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
 }
 
 .time-value {
-  color: #1f2937;
+  color: var(--factory-accent-cyan);
   font-weight: 700;
-  font-size: 16px;
-  min-width: 60px;
+  font-size: 18px;
+  min-width: 70px;
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
 }
 
 .time-separator {
-  color: #9ca3af;
+  color: var(--factory-text-tertiary);
   margin: 0 2px;
+  font-size: 14px;
 }
 
 .time-total {
-  color: #6b7280;
+  color: var(--factory-text-secondary);
   font-weight: 500;
+  font-size: 14px;
 }
 
 .current-stage-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: #f3f4f6;
+  gap: var(--spacing-sm);
+  padding: 6px 14px;
+  background: var(--factory-bg-elevated);
+  border: 1px solid var(--factory-border-bright);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
+  font-family: var(--font-mono);
 }
 
 .stage-label {
-  color: #6b7280;
+  color: var(--factory-text-tertiary);
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
 }
 
 .stage-name {
-  color: #4f46e5;
+  color: var(--factory-accent-cyan);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
 }
 
 /* Timeline Scrubber Container */
 .timeline-scrubber {
   position: relative;
   padding: 0 60px 40px 60px;
+  overflow: visible;
 }
 
 /* Markers Row - Above Timeline */
@@ -77,13 +112,7 @@
   margin-bottom: 12px;
   align-items: flex-start;
   justify-content: space-between;
-}
-
-.marker-connector {
-  width: 2px;
-  height: 12px;
-  background: #d1d5db;
-  transition: all 0.2s;
+  overflow: visible;
 }
 
 /* Stage Markers */
@@ -96,57 +125,45 @@
   gap: 6px;
   transform: translateX(-50%);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 5;
 }
 
 .stage-marker-label {
-  background: #e0e7ff;
-  color: #4f46e5;
-  border: 2px solid #818cf8;
-  border-radius: 6px;
+  background: var(--factory-bg-elevated);
+  color: var(--factory-accent-cyan);
+  border: 2px solid var(--factory-border-bright);
+  border-radius: 4px;
   padding: 6px 12px;
   font-size: 11px;
   font-weight: 700;
+  font-family: var(--font-mono);
   white-space: nowrap;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 44px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
+  letter-spacing: 0.5px;
 }
 
 .stage-marker:hover .stage-marker-label {
-  background: #c7d2fe;
-  border-color: #6366f1;
+  background: var(--factory-bg-hover);
+  border-color: var(--factory-accent-cyan);
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), var(--shadow-md);
 }
 
 .stage-marker-selected .stage-marker-label {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #3b82f6;
-  color: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 2px 8px rgba(59, 130, 246, 0.4);
+  background: var(--factory-accent-cyan);
+  border-color: var(--factory-accent-cyan);
+  color: var(--factory-bg-deep);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.6), var(--shadow-md);
   transform: scale(1.1);
 }
 
 .stage-marker-selected:hover .stage-marker-label {
   transform: translateY(-2px) scale(1.15);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(59, 130, 246, 0.5);
-}
-
-.stage-marker .marker-connector {
-  background: #818cf8;
-}
-
-.stage-marker-selected .marker-connector {
-  background: #3b82f6;
-  height: 14px;
-}
-
-.stage-marker:hover .marker-connector {
-  background: #6366f1;
-  height: 14px;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.8), var(--shadow-lg);
 }
 
 /* End Marker */
@@ -159,74 +176,64 @@
   gap: 6px;
   transform: translateX(-50%);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 5;
 }
 
 .end-marker-label {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 2px solid #d1d5db;
-  border-radius: 6px;
+  background: var(--factory-bg-elevated);
+  color: var(--factory-text-secondary);
+  border: 2px solid var(--factory-border);
+  border-radius: 4px;
   padding: 6px 12px;
   font-size: 11px;
   font-weight: 700;
+  font-family: var(--font-mono);
   white-space: nowrap;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 44px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
+  letter-spacing: 0.5px;
 }
 
 .timeline-end-marker:hover .end-marker-label {
-  background: #e5e7eb;
-  border-color: #9ca3af;
+  background: var(--factory-bg-hover);
+  border-color: var(--factory-border-bright);
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .timeline-end-marker.end-marker-active .end-marker-label {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-color: #10b981;
-  color: white;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 2px 8px rgba(16, 185, 129, 0.4);
+  background: var(--factory-accent-emerald);
+  border-color: var(--factory-accent-emerald);
+  color: var(--factory-bg-deep);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), var(--shadow-md);
   transform: scale(1.1);
 }
 
 .timeline-end-marker.end-marker-active:hover .end-marker-label {
   transform: translateY(-2px) scale(1.15);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4), 0 4px 12px rgba(16, 185, 129, 0.5);
-}
-
-.timeline-end-marker .marker-connector {
-  background: #d1d5db;
-}
-
-.timeline-end-marker:hover .marker-connector {
-  background: #9ca3af;
-  height: 14px;
-}
-
-.timeline-end-marker.end-marker-active .marker-connector {
-  background: #10b981;
-  height: 14px;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.8), var(--shadow-lg);
 }
 
 /* Timeline Track Container */
 .timeline-track-container {
   position: relative;
-  padding: 0 0 0 0;
-  margin-bottom: 8px;
+  padding: 0;
+  margin-bottom: var(--spacing-sm);
+  overflow: visible;
 }
 
 .timeline-track {
   position: relative;
-  height: 12px;
-  background: #f3f4f6;
-  border-radius: 6px;
+  height: 14px;
+  background: var(--factory-bg-elevated);
+  border: 1px solid var(--factory-border);
+  border-radius: 3px;
   overflow: visible;
   margin: 0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* Stage Segments */
@@ -234,21 +241,22 @@
   position: absolute;
   top: 0;
   height: 100%;
-  background: #e5e7eb;
-  border-radius: 6px;
-  transition: all 0.2s;
-  opacity: 0.6;
+  background: var(--factory-bg-hover);
+  border-radius: 2px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.5;
+  border-right: 1px solid var(--factory-border-bright);
 }
 
 .timeline-segment.segment-active {
-  opacity: 0.8;
-  background: #dbeafe;
+  opacity: 0.7;
+  background: rgba(6, 182, 212, 0.15);
 }
 
 .timeline-segment.segment-selected {
   opacity: 1;
-  background: #bfdbfe;
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
+  background: rgba(6, 182, 212, 0.25);
+  box-shadow: inset 0 0 8px rgba(6, 182, 212, 0.4);
 }
 
 /* Progress Bar */
@@ -257,40 +265,68 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-  border-radius: 6px;
+  background: linear-gradient(90deg,
+    var(--factory-accent-cyan) 0%,
+    rgba(6, 182, 212, 0.8) 100%
+  );
+  border-radius: 2px 0 0 2px;
   transition: width 0.1s linear;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.2);
   z-index: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated shine effect on progress bar */
+.timeline-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shine 2s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0%, 100% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
 }
 
 /* Track Boundary Markers */
 .track-boundary-marker {
   position: absolute;
-  top: -2px;
-  width: 3px;
-  height: 16px;
-  background: #9ca3af;
-  border-radius: 2px;
+  top: -3px;
+  width: 2px;
+  height: calc(100% + 6px);
+  background: var(--factory-border-bright);
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 3;
-  transition: all 0.2s;
+  transition: all 0.25s;
 }
 
 .track-boundary-marker.boundary-active {
-  background: #3b82f6;
-  width: 4px;
-  height: 18px;
-  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
+  background: var(--factory-accent-cyan);
+  width: 3px;
+  box-shadow: 0 0 8px var(--factory-accent-cyan);
 }
 
 /* Event Markers on Track */
 .timeline-marker {
   position: absolute;
-  top: -2px;
+  top: -4px;
   width: 4px;
-  height: 16px;
+  height: calc(100% + 8px);
   border-radius: 2px;
   transform: translateX(-50%);
   pointer-events: none;
@@ -298,15 +334,15 @@
 }
 
 .marker-stage {
-  background: #3b82f6;
-  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
+  background: var(--factory-accent-cyan);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
 }
 
 .marker-shuffle {
-  background: #ef4444;
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+  background: var(--factory-accent-amber);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
   width: 5px;
-  height: 18px;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 /* Bookmarks Row */
@@ -326,66 +362,79 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1.5px solid #d1d5db;
-  border-radius: 6px;
+  background: var(--factory-bg-elevated);
+  border: 1.5px solid var(--factory-border-bright);
+  border-radius: 4px;
   font-size: 10px;
+  font-family: var(--font-mono);
   cursor: default;
   pointer-events: auto;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.85;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   white-space: nowrap;
 }
 
 .timeline-bookmark:hover {
   opacity: 1;
   transform: translateX(-50%) translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   z-index: 10;
+  border-color: var(--factory-accent-cyan);
 }
 
 .bookmark-icon {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
 }
 
 .bookmark-label {
   font-weight: 600;
-  color: #374151;
+  color: var(--factory-text-secondary);
   white-space: nowrap;
   font-size: 10px;
+  letter-spacing: 0.5px;
 }
 
 .bookmark-shuffle {
-  border-color: #f59e0b;
-  background: #fef3c7;
+  border-color: var(--factory-accent-amber);
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .bookmark-shuffle .bookmark-label {
-  color: #92400e;
+  color: var(--factory-accent-amber);
+}
+
+.bookmark-shuffle:hover {
+  border-color: var(--factory-accent-amber);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3), var(--shadow-md);
 }
 
 .bookmark-stage {
-  border-color: #818cf8;
-  background: #e0e7ff;
+  border-color: var(--factory-accent-cyan);
+  background: rgba(6, 182, 212, 0.1);
 }
 
 .bookmark-stage .bookmark-label {
-  color: #4f46e5;
+  color: var(--factory-accent-cyan);
+}
+
+.bookmark-stage:hover {
+  border-color: var(--factory-accent-cyan);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.3), var(--shadow-md);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .timeline-controller {
-    padding: 12px 16px 16px;
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 
   .timeline-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
   }
 
   .time-display {
