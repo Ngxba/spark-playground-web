@@ -301,6 +301,7 @@ class ExecutionSimulator:
         all_tasks = []
         current_time = 0.0
         task_id_counter = 0
+        partition_id_counter = 0  # Global partition ID counter to match _generate_partitions_with_lineage
 
         for stage_idx, stage_info in enumerate(stages_info):
             # Determine operation type
@@ -333,7 +334,11 @@ class ExecutionSimulator:
 
             # Distribute tasks across nodes
             for task_idx in range(num_tasks):
-                partition_id = task_idx
+                # Use global partition_id_counter instead of task_idx
+                # This matches the partition IDs generated in _generate_partitions_with_lineage
+                partition_id = partition_id_counter
+                partition_id_counter += 1
+
                 node_id = task_idx % self.node_count
                 core_id = (task_idx // self.node_count) % self.cores_per_node
 
