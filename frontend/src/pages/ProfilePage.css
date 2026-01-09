@@ -3,6 +3,8 @@
    ============================================ */
 
 .profile-page {
+  width: calc(100% + 4rem);
+  max-width: none;
   background: var(--color-bg-darker);
   position: relative;
   margin: -2rem;

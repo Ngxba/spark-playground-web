@@ -1,5 +1,7 @@
 /* Modern Workspace Container */
 .workspace-modern {
+  width: calc(100% + 4rem);
+  max-width: none;
   display: flex;
   flex-direction: column;
   margin: -2rem;

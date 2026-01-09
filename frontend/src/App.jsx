@@ -6,6 +6,7 @@ import ReportPage from './pages/ReportPage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import StudyPlanPage from './pages/StudyPlanPage';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -13,7 +14,7 @@ import './App.css';
 
 function AppContent() {
   const location = useLocation();
-  const showSidebars = location.pathname === '/puzzles';
+  const showSidebars = location.pathname === '/puzzles' || location.pathname === '/study-plan';
   const showHeader = location.pathname !== '/' && !location.pathname.startsWith('/signin') && !location.pathname.startsWith('/signup');
 
   return (
@@ -27,6 +28,7 @@ function AppContent() {
             <Route path="/signin" element={<AuthPage />} />
             <Route path="/signup" element={<AuthPage />} />
             <Route path="/puzzles" element={<PuzzleList />} />
+            <Route path="/study-plan" element={<StudyPlanPage />} />
             <Route path="/puzzle/:puzzleId" element={<PuzzleWorkspace />} />
             <Route path="/puzzle/:puzzleId/report" element={<ReportPage />} />
             <Route path="/profile" element={<ProfilePage />} />
