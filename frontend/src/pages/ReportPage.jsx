@@ -6,6 +6,7 @@ import ExecutionInsights from '../components/ExecutionInsights';
 import ProgressiveHints from '../components/ProgressiveHints';
 import QueryPlanViewer from '../components/QueryPlanViewer';
 import FactoryView from '../components/FactoryView/FactoryView';
+import FactoryViewRedesigned from '../components/FactoryView/FactoryViewRedesigned';
 import StageFlowView from '../components/FactoryView/StageFlowView';
 import ClusterOverview from '../components/ClusterOverview';
 import './ReportPage.css';
@@ -238,7 +239,7 @@ function ReportPage() {
           )}
 
           {activeTab === 'factory' && (
-            <FactoryView
+            <FactoryViewRedesigned
               simulationData={result.execution_simulation}
             />
           )}

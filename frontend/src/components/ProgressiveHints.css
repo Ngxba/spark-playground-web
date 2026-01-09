@@ -3,7 +3,7 @@
    ============================================ */
 
 .progressive-hints {
-  padding: 2rem;
+  padding: 0 2rem;
   background: var(--color-bg-darker);
   min-height: 100%;
 }

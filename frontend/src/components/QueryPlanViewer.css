@@ -105,6 +105,7 @@
 
 .plan-line {
   padding: 2px 0;
+  color: var(--color-text-secondary);
 }
 
 .broadcast-op {
