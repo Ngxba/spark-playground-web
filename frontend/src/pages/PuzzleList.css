@@ -1,5 +1,6 @@
 .puzzle-list-modern {
-  max-width: 100%;
+  width: calc(100% + 4rem);
+  max-width: none;
   margin: -2rem;
   padding: 2rem;
   animation: fadeIn 0.5s ease;

@@ -5,9 +5,9 @@
 
 /* Page Container */
 .report-page-container {
-  width: 100%;
+  width: calc(100% + 4rem);
+  max-width: none;
   background: var(--color-bg-darker);
-  padding: 0;
   position: relative;
   margin: -2rem;
   padding: 2rem;

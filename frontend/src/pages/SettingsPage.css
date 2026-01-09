@@ -3,6 +3,8 @@
    ============================================ */
 
 .settings-page {
+  width: calc(100% + 4rem);
+  max-width: none;
   background: var(--color-bg-darker);
   margin: -2rem;
   padding: 2rem;
