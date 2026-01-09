@@ -41,7 +41,7 @@
    ============================================ */
 
 .stage-flow-view {
-  padding: var(--sfv-space-xl);
+  /* padding: var(--sfv-space-xl); */
   background: var(--sfv-deep-space);
   min-height: 100vh;
   font-family: var(--sfv-font-mono);
@@ -418,7 +418,7 @@
   font-weight: 700;
   font-family: var(--sfv-font-display);
   text-transform: uppercase;
-  margin: 4px 0;
+  margin: 0 10px;
 }
 
 .full-flow-connector {
@@ -522,7 +522,7 @@
   font-family: var(--sfv-font-display);
 }
 
-.detail-item value {
+.detail-value {
   font-size: 16px;
   color: var(--sfv-text-primary);
   font-weight: 600;

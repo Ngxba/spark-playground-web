@@ -1,3 +1,4 @@
+import React from 'react';
 import './StageFlowView.css';
 
 /**
@@ -33,9 +34,9 @@ function StageNavigator({ stages, currentStageIndex, onStageSelect }) {
     <div className="stage-navigator">
       <div className="stage-timeline">
         {stages.map((stage, index) => (
-          <>
+          <React.Fragment key={`stage-${stage.id}-${index}`}>
             {/* Stage Container - Circle and Label together */}
-            <div key={stage.id} className="stage-timeline-item">
+            <div className="stage-timeline-item">
               <div
                 className={`stage-circle ${index === currentStageIndex ? 'active' : ''} ${
                   index < currentStageIndex ? 'completed' : ''
@@ -76,7 +77,7 @@ function StageNavigator({ stages, currentStageIndex, onStageSelect }) {
                 </svg>
               </div>
             )}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </div>
