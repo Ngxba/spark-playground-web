@@ -577,7 +577,6 @@ function PartitionQueue({ stage, partitions, currentState, hoveredPartition, set
             >
               <div className="fv-queue-partition-id">P{partition.id}</div>
               {state === 'running' && <div className="fv-queue-partition-pulse"></div>}
-              {state === 'completed' && <div className="fv-queue-partition-check">✓</div>}
             </div>
           );
         })}
@@ -639,8 +638,8 @@ function ExecutorMachine({
 
           // Debug: Log when partition should exist but doesn't
           if (coreTask && coreTask.partition_id !== undefined && !partition) {
-            console.warn(`Missing partition ${coreTask.partition_id} for task ${coreTask.id} on stage ${stage.id}, node ${node.id}, core ${coreIdx}`);
-            console.log('Available partitions:', partitions.map(p => p.id));
+            // console.warn(`Missing partition ${coreTask.partition_id} for task ${coreTask.id} on stage ${stage.id}, node ${node.id}, core ${coreIdx}`);
+            // console.log('Available partitions:', partitions.map(p => p.id));
           }
 
           return (
