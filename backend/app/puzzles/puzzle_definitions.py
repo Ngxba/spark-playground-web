@@ -35,13 +35,15 @@ respective bins.""",
         {"id": 6, "type": "cherry", "color": "purple"},
         {"id": 9, "type": "cherry", "color": "purple"},
     ],
-    starter_code="""# Group the fruits by type using PySpark
-# The input DataFrame is called 'fruits'
-# Store your result in a variable called 'result'
-# Don't forget to call .show() or .collect() to see results!
+    starter_code="""# Define a function that groups fruits by type
+# Your function receives a 'fruits' DataFrame as input
+# Return the transformed DataFrame (do NOT call .show() or .collect())
 
-result = fruits.orderBy('type')
-result.show()
+def solve(fruits):
+    # Your code here
+    # Return the fruits ordered by type
+    result = fruits.orderBy('type')
+    return result
 """,
     optimal_solution="""result = fruits.orderBy('type')
 result.show()""",
@@ -89,14 +91,19 @@ with a few City Info boxes (city code and city name). You need to enrich each or
         {"order_id": 7, "city_code": "SF", "amount": 220, "city_name": "San Francisco"},
         {"order_id": 8, "city_code": "LA", "amount": 190, "city_name": "Los Angeles"},
     ],
-    starter_code="""# Join orders with city information using PySpark
+    starter_code="""# Define a function that joins orders with city information
 # Hint: cities is a small dataset - use broadcast() to avoid shuffle!
-# Input DataFrames: 'orders' and 'cities'
-# Store your result in 'result'
+# Your function receives 'orders' and 'cities' DataFrames as input
+# Return the joined DataFrame (do NOT call .show() or .collect())
 
-# Inefficient: regular join (causes shuffle)
-result = orders.join(cities, 'city_code')
-result.show()
+from pyspark.sql.functions import broadcast
+
+def solve(orders, cities):
+    # Your code here
+    # Inefficient: regular join (causes shuffle)
+    result = orders.join(cities, 'city_code')
+    # TODO: Try using broadcast() for better performance!
+    return result
 """,
     optimal_solution="""# Optimal: Use broadcast join to avoid shuffle
 from pyspark.sql.functions import broadcast
@@ -138,14 +145,17 @@ the total quantity of products by type.""",
         {"type": "B", "quantity": 30},
         {"type": "C", "quantity": 20},
     ],
-    starter_code="""# Calculate total quantity per product type using PySpark
-# Input DataFrame: 'products'
-# Store your result in 'result'
+    starter_code="""# Define a function that calculates total quantity per product type
+# Your function receives a 'products' DataFrame as input
+# Return the aggregated DataFrame (do NOT call .show() or .collect())
 
 from pyspark.sql.functions import sum
 
-result = products.groupBy('type').agg(sum('quantity').alias('quantity'))
-result.show()
+def solve(products):
+    # Your code here
+    # Group by type and sum quantities
+    result = products.groupBy('type').agg(sum('quantity').alias('quantity'))
+    return result
 """,
     optimal_solution="""from pyspark.sql.functions import sum
 result = products.groupBy('type').agg(sum('quantity').alias('quantity'))
@@ -188,17 +198,20 @@ with additional information. Defective items should NOT be processed at all.""",
         {"item_id": 4, "defective": False, "info_key": "C", "category": "Clothing"},
         {"item_id": 6, "defective": False, "info_key": "C", "category": "Clothing"},
     ],
-    starter_code="""# Join items with info, but only for non-defective items
+    starter_code="""# Define a function that joins items with info for non-defective items
 # Think about WHEN to filter for best performance!
-# Input DataFrames: 'items' and 'info'
-# Store your result in 'result'
+# Your function receives 'items' and 'info' DataFrames as input
+# Return the filtered and joined DataFrame (do NOT call .show() or .collect())
 
 from pyspark.sql.functions import col
 
-# Inefficient: filter after join
-result = items.join(info, 'info_key')
-result = result.filter(col('defective') == False)
-result.show()
+def solve(items, info):
+    # Your code here
+    # Inefficient: filter after join
+    result = items.join(info, 'info_key')
+    result = result.filter(col('defective') == False)
+    # TODO: Try filtering BEFORE joining for better performance!
+    return result
 """,
     optimal_solution="""# Optimal: filter before join (pushdown optimization)
 from pyspark.sql.functions import col
@@ -246,7 +259,13 @@ filter and prepare for shipping. Currently, it's reading the data twice.""",
             {"id": 6, "material": "steel", "weight": 120},
         ]
     },
-    starter_code="""# Process the data twice: count by material and filter heavy items
+    starter_code="""# NOTE: This puzzle is not yet compatible with V2 (function-based submission)
+# V2 requires returning a single DataFrame, but this puzzle returns a dict
+# TODO: Redesign this puzzle for V2 or add support for dict returns
+
+# For now, this puzzle will use V1 (script-based submission)
+
+# Process the data twice: count by material and filter heavy items
 # Currently inefficient - data is processed twice without caching
 # Input DataFrame: 'raw_materials'
 # Store counts and heavy items, then return as dict

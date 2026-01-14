@@ -4,21 +4,20 @@ from typing import List
 from uuid import UUID
 from app.database import get_db
 from app.repositories.run_repository import RunRepository
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter()
 
 
 class RunSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     puzzle_id: str
     is_correct: bool
     stars: int
     created_at: str
     error_message: str | None
-
-    class Config:
-        from_attributes = True
 
 
 @router.get("/runs")
