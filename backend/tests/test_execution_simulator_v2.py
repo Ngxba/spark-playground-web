@@ -133,7 +133,6 @@ class TestExecutionSimulatorV2:
             "puzzle_execution_test_001",
             mock_metadata
         )
-        print(simulation)
         # Assertions
         assert simulation is not None
         assert isinstance(simulation, ExecutionSimulation)

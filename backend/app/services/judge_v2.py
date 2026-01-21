@@ -5,7 +5,6 @@ from app.services.executor_v2 import ExecutorV2
 from app.services.spark_event_tracker import SparkEventTracker
 from app.services.execution_simulator_v2 import ExecutionSimulatorV2
 from app.services.operation_detector import OperationDetector
-from app.services.metrics_calculator import MetricsCalculator
 from app.services.hint_generator import HintGenerator
 import pandas as pd
 
@@ -27,7 +26,6 @@ class JudgeV2:
         self.event_tracker = SparkEventTracker()
         self.execution_simulator = ExecutionSimulatorV2(self.event_tracker)
         self.operation_detector = OperationDetector()
-        self.metrics_calculator = MetricsCalculator()
         self.hint_generator = HintGenerator()
 
     def evaluate(

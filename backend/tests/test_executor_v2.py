@@ -35,7 +35,7 @@ def solve(fruits):
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
         )
-
+        print(metadata)
         # Assertions
         assert error is None, f"Unexpected error: {error}"
         assert result is not None
@@ -51,7 +51,7 @@ def solve(fruits):
         executor = ExecutorV2()
         code = """
 # No solve function defined
-result = fruits.orderBy('type')
+x = 1 + 1
 """
         execution_id = "test_002"
 
@@ -64,6 +64,28 @@ result = fruits.orderBy('type')
         assert "No solve() function found" in error
         assert result is None
 
+    def test_dataframe_access_outside_function(self, sample_input_data):
+        """Test that users cannot access DataFrames outside solve() function"""
+        executor = ExecutorV2()
+        code = """
+# Trying to use DataFrame at module level (not inside solve)
+result = fruits.orderBy('type')
+
+def solve(fruits):
+    return result
+"""
+        execution_id = "test_003"
+
+        result, output_log, error, metadata, job_group_id = executor.execute(
+            code, sample_input_data, execution_id
+        )
+
+        # Assertions
+        assert error is not None
+        # Should get NameError because 'fruits' is not in exec_globals
+        assert "NameError" in error
+        assert "fruits" in error
+
     def test_wrong_parameter_names(self, sample_input_data):
         """Test error handling for wrong parameter names"""
         executor = ExecutorV2()
@@ -71,7 +93,7 @@ result = fruits.orderBy('type')
 def solve(wrong_param):
     return wrong_param.orderBy('type')
 """
-        execution_id = "test_003"
+        execution_id = "test_004"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -88,7 +110,7 @@ def solve(wrong_param):
 def solve(fruits, extra_param):
     return fruits.orderBy('type')
 """
-        execution_id = "test_004"
+        execution_id = "test_005"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -105,7 +127,7 @@ def solve(fruits, extra_param):
 def solve(fruits):
     return [1, 2, 3]  # Returns list, not DataFrame
 """
-        execution_id = "test_005"
+        execution_id = "test_006"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -123,7 +145,7 @@ def solve(fruits):
     fruits.collect()  # This should be blocked
     return fruits
 """
-        execution_id = "test_006"
+        execution_id = "test_007"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -141,7 +163,7 @@ def solve(fruits):
     fruits.show()  # This should be blocked
     return fruits
 """
-        execution_id = "test_007"
+        execution_id = "test_008"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -159,7 +181,7 @@ def solve(fruits):
     n = fruits.count()  # This should be blocked
     return fruits
 """
-        execution_id = "test_008"
+        execution_id = "test_009"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -180,7 +202,7 @@ def solve(fruits):
     result = fruits.filter(col('type') == 'apple').orderBy('id')
     return result
 """
-        execution_id = "test_009"
+        execution_id = "test_010"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -199,7 +221,7 @@ def solve(fruits):
 def solve(fruits):
     return fruits.orderBy('type')
 """
-        execution_id = "test_010"
+        execution_id = "test_011"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -222,7 +244,7 @@ def solve(fruits):
 def solve(fruits):
     return fruits.orderBy('type'  # Missing closing parenthesis
 """
-        execution_id = "test_011"
+        execution_id = "test_012"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -240,7 +262,7 @@ def solve(fruits):
     result = fruits.orderBy('nonexistent_column')  # Column doesn't exist
     return result
 """
-        execution_id = "test_012"
+        execution_id = "test_013"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -269,7 +291,7 @@ def solve(fruits):
 def solve(orders, cities):
     return orders.join(cities, 'city_code')
 """
-        execution_id = "test_013"
+        execution_id = "test_014"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, input_data, execution_id
@@ -306,7 +328,7 @@ def solve(fruits):
 def solve(fruits):
     return fruits.orderBy('id')
 """
-        execution_id = "test_014"
+        execution_id = "test_015"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, sample_input_data, execution_id
@@ -329,7 +351,7 @@ def solve(fruits):
 def solve(empty_data):
     return empty_data
 """
-        execution_id = "test_015"
+        execution_id = "test_016"
 
         result, output_log, error, metadata, job_group_id = executor.execute(
             code, input_data, execution_id

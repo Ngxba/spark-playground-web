@@ -35,6 +35,9 @@ class ExecutorV2:
         app_name = f"SparkPlayground-{int(time.time())}"
         event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR", "/tmp/spark-events")
 
+        # Ensure event log directory exists
+        os.makedirs(event_log_dir, exist_ok=True)
+
         spark = (SparkSession.builder
                 .master("local[2]")  # Use 2 cores for testing
                 .appName(app_name)
@@ -179,7 +182,7 @@ class ExecutorV2:
         def action_blocker(method_name):
             def wrapper(self, *args, **kwargs):
                 raise RuntimeError(
-                    f"❌ Cannot call .{method_name}() inside solve() function!\n"
+                    f"Cannot call .{method_name}() inside solve() function!\n"
                     f"Your function should return a DataFrame without calling actions.\n"
                     f"The platform will handle data collection automatically."
                 )
@@ -226,7 +229,7 @@ class ExecutorV2:
         # Check if solve exists
         if 'solve' not in exec_globals:
             error = (
-                "❌ No solve() function found!\n\n"
+                "No solve() function found!\n\n"
                 "Your code must define a function named 'solve' that:\n"
                 "1. Takes DataFrame parameters matching the puzzle inputs\n"
                 "2. Returns a DataFrame as the result\n\n"
@@ -241,7 +244,7 @@ class ExecutorV2:
 
         # Check if it's actually a function
         if not callable(solve_func):
-            error = "❌ solve must be a function, not " + type(solve_func).__name__
+            error = "solve() must be a function, not " + type(solve_func).__name__
             return None, error
 
         # Get function signature
@@ -249,7 +252,7 @@ class ExecutorV2:
             sig = inspect.signature(solve_func)
             param_names = list(sig.parameters.keys())
         except Exception as e:
-            error = f"❌ Could not inspect solve() signature: {str(e)}"
+            error = f"Could not inspect solve() signature: {str(e)}"
             return None, error
 
         # Validate parameter count
@@ -258,7 +261,7 @@ class ExecutorV2:
 
         if len(param_names) != len(input_data_keys):
             error = (
-                f"❌ Parameter count mismatch!\n"
+                f"Parameter count mismatch!\n"
                 f"Expected {len(input_data_keys)} parameters: {expected_params}\n"
                 f"Got {len(param_names)} parameters: {actual_params}"
             )
@@ -267,7 +270,7 @@ class ExecutorV2:
         # Validate parameter names match
         if actual_params != expected_params:
             error = (
-                f"❌ Parameter names don't match!\n"
+                f"Parameter names don't match!\n"
                 f"Expected: {expected_params}\n"
                 f"Got: {actual_params}\n\n"
                 f"Make sure your function parameters match the input data names."
@@ -515,7 +518,7 @@ class ExecutorV2:
                 # 8. Validate result is a DataFrame
                 if not isinstance(result_df, SparkDataFrame):
                     raise TypeError(
-                        f"❌ solve() must return a DataFrame!\n"
+                        f"solve() must return a DataFrame!\n"
                         f"You returned: {type(result_df).__name__}\n"
                         f"Make sure your function ends with: return result_df"
                     )
