@@ -17,6 +17,14 @@ def pytest_sessionstart():
     if jar_dir.exists():
         os.environ.setdefault("PYSPARK_JARS_DIR", str(jar_dir))
 
+@pytest.fixture(scope="session", autouse=True)
+def spark_env():
+    os.environ.setdefault("SPARK_MASTER_URL", "spark://localhost:7077")
+    os.environ.setdefault("MINIO_ENDPOINT", "http://localhost:9000")
+    os.environ.setdefault("SPARK_EVENT_LOG_DIR", "s3a://spark-events/spark-history/")
+    os.environ.setdefault("MINIO_ACCESS_KEY", "minioadmin")
+    os.environ.setdefault("MINIO_SECRET_KEY", "minioadmin")
+
 # =============================================================================
 # Configuration
 # =============================================================================

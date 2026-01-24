@@ -9,6 +9,9 @@ import traceback
 import threading
 import time
 import os
+import boto3
+from botocore.client import Config
+from urllib.parse import urlparse
 
 
 class TimeoutException(Exception):
@@ -30,10 +33,43 @@ class ExecutorV2:
     def __init__(self, timeout_seconds: int = 30):
         self.timeout_seconds = timeout_seconds
 
+    def _ensure_s3a_eventlog_prefix(self, event_log_dir: str, endpoint: str, access_key: str, secret_key: str) -> None:
+        """
+        Ensure the S3 bucket exists and that the event-log prefix exists by writing a tiny marker object.
+
+        event_log_dir should be like: s3a://bucket/prefix/
+        """
+        u = urlparse(event_log_dir.replace("s3a://", "s3://", 1))
+        bucket = u.netloc
+        prefix = (u.path or "/").lstrip("/")
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+
+        # Put marker under a meta sub-prefix so it doesn't look like an event log file
+        marker_key = f"{prefix}_meta/.keep"
+
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            config=Config(signature_version="s3v4"),
+            # region_name=os.getenv("AWS_REGION", "us-east-1"),
+        )
+
+        # Create bucket if missing (idempotent-ish)
+        try:
+            s3.head_bucket(Bucket=bucket)
+        except Exception:
+            s3.create_bucket(Bucket=bucket)
+
+        # Create marker object (idempotent)
+        s3.put_object(Bucket=bucket, Key=marker_key, Body=b"")
+
     def _create_spark_session(self) -> SparkSession:
         """Create a new SparkSession for this execution"""
         # Generate unique app name with timestamp
-        master_url = os.getenv("SPARK_MASTER_URL", "spark://localhost:7077")
+        master_url = os.getenv("SPARK_MASTER_URL")
         jar_dir = os.getenv("PYSPARK_JARS_DIR", "pyspark_jars")
         app_name = f"SparkPlayground-{int(time.time())}"
         
@@ -59,9 +95,12 @@ class ExecutorV2:
             
             # Add S3 (MinIO) configuration only if using S3
             if use_s3:
-                minio_endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-                minio_access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-                minio_secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+                minio_endpoint = os.getenv("MINIO_ENDPOINT")
+                minio_access_key = os.getenv("MINIO_ACCESS_KEY")
+                minio_secret_key = os.getenv("MINIO_SECRET_KEY")
+                if event_log_dir and use_s3:
+                    event_log_dir = event_log_dir.rstrip("/") + "/"
+                    self._ensure_s3a_eventlog_prefix(event_log_dir, minio_endpoint, minio_access_key, minio_secret_key)
                 
                 builder = (builder
                     .config("spark.hadoop.fs.s3a.endpoint", minio_endpoint)
