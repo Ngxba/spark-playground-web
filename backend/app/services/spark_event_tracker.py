@@ -2,6 +2,8 @@ import requests
 from typing import List, Dict, Any, Optional
 import time
 
+from app.config import settings
+
 
 class SparkEventTracker:
     """
@@ -13,11 +15,11 @@ class SparkEventTracker:
 
     def __init__(
         self,
-        history_server_url: str = "http://localhost:18080",
-        active_ui_url: str = "http://localhost:4040"
+        history_server_url: Optional[str] = None,
+        active_ui_url: Optional[str] = None
     ):
-        self.history_server_url = history_server_url.rstrip('/')
-        self.active_ui_url = active_ui_url.rstrip('/')
+        self.history_server_url = (history_server_url or settings.spark_history_server_url).rstrip('/')
+        self.active_ui_url = (active_ui_url or settings.spark_active_ui_url).rstrip('/')
 
     def get_jobs_by_group(
         self,

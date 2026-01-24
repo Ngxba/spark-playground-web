@@ -7,30 +7,16 @@ Provides:
 - Service fixtures (ExecutorV2, SparkEventTracker, etc.)
 """
 
-import os
 import pytest
 from typing import Dict, Any
-from pathlib import Path
 
-def pytest_sessionstart():
-    jar_dir = Path(__file__).parent.parent / "pyspark_jars"
-    if jar_dir.exists():
-        os.environ.setdefault("PYSPARK_JARS_DIR", str(jar_dir))
+from app.config import settings
 
-@pytest.fixture(scope="session", autouse=True)
-def spark_env():
-    os.environ.setdefault("SPARK_MASTER_URL", "spark://localhost:7077")
-    os.environ.setdefault("MINIO_ENDPOINT", "http://localhost:9000")
-    os.environ.setdefault("SPARK_EVENT_LOG_DIR", "s3a://spark-events/spark-history/")
-    os.environ.setdefault("MINIO_ACCESS_KEY", "minioadmin")
-    os.environ.setdefault("MINIO_SECRET_KEY", "minioadmin")
 
 # =============================================================================
-# Configuration
+# Configuration (from settings)
 # =============================================================================
 
-SPARK_HISTORY_SERVER_URL = "http://0.0.0.0:18080"
-SPARK_ACTIVE_UI_URL = "http://localhost:4040"
 EVENT_WAIT_TIMEOUT = 5.0
 
 
@@ -256,12 +242,9 @@ def executor():
 
 @pytest.fixture
 def event_tracker():
-    """Create SparkEventTracker with real server URL"""
+    """Create SparkEventTracker using settings"""
     from app.services.spark_event_tracker import SparkEventTracker
-    return SparkEventTracker(
-        history_server_url=SPARK_HISTORY_SERVER_URL,
-        active_ui_url=SPARK_ACTIVE_UI_URL
-    )
+    return SparkEventTracker()  # Uses settings defaults
 
 
 @pytest.fixture

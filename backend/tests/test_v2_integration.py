@@ -20,12 +20,9 @@ import time
 
 from app.models import RunResult
 from app.models.execution import ExecutionSimulation
+from app.config import settings
 from app.services.executor_v2 import ExecutorV2
-
-
-# Configuration imported from conftest
-SPARK_HISTORY_SERVER_URL = "http://0.0.0.0:18080"
-EVENT_WAIT_TIMEOUT = 5.0
+from tests.conftest import EVENT_WAIT_TIMEOUT
 
 
 # =============================================================================
@@ -292,13 +289,13 @@ class TestSparkEventTrackerIntegration:
         import requests
 
         try:
-            response = requests.get(f"{SPARK_HISTORY_SERVER_URL}/api/v1/applications", timeout=5)
+            response = requests.get(f"{settings.spark_history_server_url}/api/v1/applications", timeout=5)
             assert response.status_code == 200
             apps = response.json()
             print(f"\n[SUCCESS] Connected to Spark History Server")
             print(f"  Available applications: {len(apps)}")
         except Exception as e:
-            pytest.skip(f"Spark History Server not available at {SPARK_HISTORY_SERVER_URL}: {e}")
+            pytest.skip(f"Spark History Server not available at {settings.spark_history_server_url}: {e}")
 
     def test_fetch_jobs_after_execution(self, executor, event_tracker, group_fruits_puzzle):
         """Test fetching jobs from Spark after code execution"""
@@ -595,7 +592,9 @@ def solve(wrong_param):
         )
 
         assert result.spark_ui_url is not None
-        assert "localhost:18080" in result.spark_ui_url or "0.0.0.0:18080" in result.spark_ui_url
+        # Check that URL contains the history server host
+        history_host = settings.spark_history_server_url.replace("http://", "").replace("https://", "")
+        assert history_host in result.spark_ui_url or "18080" in result.spark_ui_url
 
         print(f"\n[SUCCESS] Spark UI URL generated")
         print(f"  URL: {result.spark_ui_url}")

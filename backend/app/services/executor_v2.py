@@ -8,10 +8,12 @@ from pathlib import Path
 import traceback
 import threading
 import time
-import os
+import re
 import boto3
 from botocore.client import Config
 from urllib.parse import urlparse
+
+from app.config import settings
 
 
 class TimeoutException(Exception):
@@ -68,51 +70,49 @@ class ExecutorV2:
 
     def _create_spark_session(self) -> SparkSession:
         """Create a new SparkSession for this execution"""
-        # Generate unique app name with timestamp
-        master_url = os.getenv("SPARK_MASTER_URL")
-        jar_dir = os.getenv("PYSPARK_JARS_DIR", "pyspark_jars")
         app_name = f"SparkPlayground-{int(time.time())}"
-        
-        # Event log configuration - only enable if explicitly configured
-        # event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR", "s3a://spark-events/spark-history/")
-        event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR")
+
+        # Get configuration from settings
+        event_log_dir = settings.spark_event_log_dir
         use_s3 = event_log_dir.startswith("s3a://") if event_log_dir else False
 
         # Build SparkSession with base configuration
         builder = (SparkSession.builder
-                .master(master_url)
+                .master(settings.spark_master_url)
                 .appName(app_name)
-                .config("spark.sql.shuffle.partitions", "4")
-                .config("spark.driver.memory", "2g")
-                .config("spark.executor.memory", "2g")
+                .config("spark.sql.shuffle.partitions", str(settings.spark_shuffle_partitions))
+                .config("spark.driver.memory", settings.spark_driver_memory)
+                .config("spark.executor.memory", settings.spark_executor_memory)
                 .config("spark.sql.adaptive.enabled", "true"))
-        
+
         # Configure event logging only if explicitly set
         if event_log_dir:
             builder = builder.config("spark.eventLog.enabled", "true")
             builder = builder.config("spark.eventLog.dir", event_log_dir)
             builder = builder.config("spark.eventLog.compress", "false")
-            
+
             # Add S3 (MinIO) configuration only if using S3
-            if use_s3:
-                minio_endpoint = os.getenv("MINIO_ENDPOINT")
-                minio_access_key = os.getenv("MINIO_ACCESS_KEY")
-                minio_secret_key = os.getenv("MINIO_SECRET_KEY")
-                if event_log_dir and use_s3:
-                    event_log_dir = event_log_dir.rstrip("/") + "/"
-                    self._ensure_s3a_eventlog_prefix(event_log_dir, minio_endpoint, minio_access_key, minio_secret_key)
-                
+            if use_s3 and settings.minio_endpoint:
+                event_log_dir = event_log_dir.rstrip("/") + "/"
+                self._ensure_s3a_eventlog_prefix(
+                    event_log_dir,
+                    settings.minio_endpoint,
+                    settings.minio_access_key,
+                    settings.minio_secret_key
+                )
+
                 builder = (builder
-                    .config("spark.hadoop.fs.s3a.endpoint", minio_endpoint)
-                    .config("spark.hadoop.fs.s3a.access.key", minio_access_key)
-                    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key)
+                    .config("spark.hadoop.fs.s3a.endpoint", settings.minio_endpoint)
+                    .config("spark.hadoop.fs.s3a.access.key", settings.minio_access_key)
+                    .config("spark.hadoop.fs.s3a.secret.key", settings.minio_secret_key)
                     .config("spark.hadoop.fs.s3a.path.style.access", "true")
                     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
                     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
                     .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"))
-        
-        jars = [str(p) for p in Path(jar_dir).glob("*.jar")] if Path(jar_dir).is_dir() else []
 
+        # Add JARs if available
+        jar_dir = Path(settings.pyspark_jars_dir)
+        jars = [str(p) for p in jar_dir.glob("*.jar")] if jar_dir.is_dir() else []
         if jars:
             builder = builder.config("spark.jars", ",".join(jars))
 
@@ -121,31 +121,43 @@ class ExecutorV2:
 
     def _get_cluster_config(self, spark: SparkSession) -> Dict[str, Any]:
         """
-        Extract cluster configuration information from SparkSession
+        Extract cluster configuration information from SparkSession.
+
+        Dynamically queries the Spark cluster for actual executor information
+        using statusTracker and getExecutorMemoryStatus.
+
+        Note: Executors are dynamically created per job and terminated after,
+        so this captures the state at the time of the call.
 
         Returns:
             Dictionary containing cluster configuration details
         """
-        import multiprocessing
-
         try:
             sc = spark.sparkContext
             conf = sc.getConf()
 
-            # Get system info
-            total_cores = multiprocessing.cpu_count()
+            # Extract configuration values from actual Spark config
+            master = conf.get("spark.master", "unknown")
+            driver_memory = conf.get("spark.driver.memory", "unknown")
+            executor_memory = conf.get("spark.executor.memory", "unknown")
+            shuffle_partitions = conf.get("spark.sql.shuffle.partitions", "unknown")
 
-            # Extract configuration values
-            master = conf.get("spark.master", "local[*]")
-            driver_memory = conf.get("spark.driver.memory", "2g")
-            executor_memory = conf.get("spark.executor.memory", "2g")
-            shuffle_partitions = int(conf.get("spark.sql.shuffle.partitions", "4"))
+            # Try to parse shuffle_partitions as int
+            try:
+                shuffle_partitions = int(shuffle_partitions)
+            except (ValueError, TypeError):
+                pass
 
-            # For local mode, we simulate executor structure
-            if "local" in master:
-                # Parse number of cores from master string
+            # Get executor information from SparkContext
+            executors = []
+            total_executor_cores = 0
+            total_executor_memory = 0
+
+            if self._is_local_mode(master):
+                # Local mode - driver acts as executor (single JVM)
+                import multiprocessing
                 if "[*]" in master:
-                    num_cores = total_cores
+                    num_cores = multiprocessing.cpu_count()
                 elif "[" in master:
                     try:
                         num_cores = int(master.split("[")[1].split("]")[0])
@@ -154,51 +166,142 @@ class ExecutorV2:
                 else:
                     num_cores = 1
 
-                # Simulate as a single executor with multiple cores
                 executors = [{
                     "id": "driver",
                     "host": "localhost",
                     "cores": num_cores,
                     "memory_mb": self._parse_memory_string(driver_memory),
-                    "state": "RUNNING",
-                    "is_active": False
                 }]
-
                 total_executor_cores = num_cores
                 total_executor_memory = self._parse_memory_string(driver_memory)
             else:
-                executors = []
-                total_executor_cores = 0
-                total_executor_memory = 0
+                # Cluster mode - query actual executor info using statusTracker
+                try:
+                    # Get executor IDs from statusTracker (excluding driver)
+                    executor_infos = sc._jsc.sc().statusTracker().getExecutorInfos()
+                    executor_ids = [e.executorId() for e in executor_infos]
+                    executor_ids_without_driver = [eid for eid in executor_ids if eid != "driver"]
+
+                    # Get memory status per executor (includes driver)
+                    executor_memory_status = sc._jsc.sc().getExecutorMemoryStatus()
+
+                    # Get cores per executor from config
+                    cores_per_executor = conf.get("spark.executor.cores", None)
+                    if cores_per_executor:
+                        try:
+                            cores_per_executor = int(cores_per_executor)
+                        except:
+                            cores_per_executor = None
+
+                    # If not in config, estimate from defaultParallelism
+                    if not cores_per_executor:
+                        default_parallelism = sc.defaultParallelism
+                        num_executors = len(executor_ids_without_driver)
+                        cores_per_executor = max(1, default_parallelism // max(1, num_executors)) if num_executors > 0 else 1
+
+                    # Build executor info list
+                    for executor_info in executor_infos:
+                        executor_id = executor_info.executorId()
+                        is_driver = executor_id == "driver"
+
+                        # Get host and port from executor info
+                        host = executor_info.host()
+                        port = executor_info.port()
+
+                        # Get memory info if available
+                        memory_mb = 0
+                        memory_used_mb = 0
+                        if executor_memory_status.containsKey(f"{host}:{port}"):
+                            mem_tuple = executor_memory_status.get(f"{host}:{port}")
+                            max_mem_bytes = mem_tuple._1() if hasattr(mem_tuple, '_1') else 0
+                            remaining_mem_bytes = mem_tuple._2() if hasattr(mem_tuple, '_2') else 0
+                            memory_mb = int(max_mem_bytes / (1024 * 1024))
+                            memory_used_mb = int((max_mem_bytes - remaining_mem_bytes) / (1024 * 1024))
+                        elif executor_memory_status.containsKey(executor_id):
+                            mem_tuple = executor_memory_status.get(executor_id)
+                            max_mem_bytes = mem_tuple._1() if hasattr(mem_tuple, '_1') else 0
+                            remaining_mem_bytes = mem_tuple._2() if hasattr(mem_tuple, '_2') else 0
+                            memory_mb = int(max_mem_bytes / (1024 * 1024))
+                            memory_used_mb = int((max_mem_bytes - remaining_mem_bytes) / (1024 * 1024))
+
+                        executor_data = {
+                            "id": executor_id,
+                            "host": host,
+                            "port": port,
+                            "cores": cores_per_executor if not is_driver else 0,
+                            "memory_mb": memory_mb,
+                            "memory_used_mb": memory_used_mb,
+                        }
+                        executors.append(executor_data)
+
+                        if not is_driver:
+                            total_executor_cores += cores_per_executor
+                            total_executor_memory += memory_mb
+
+                except Exception as e:
+                    # Fallback: use configuration values
+                    print(f"Warning: Failed to get executor info from statusTracker: {e}")
+                    executor_cores = conf.get("spark.executor.cores", "1")
+                    num_executors = conf.get("spark.executor.instances", "1")
+
+                    try:
+                        executor_cores = int(executor_cores)
+                        num_executors = int(num_executors)
+                    except:
+                        executor_cores = 1
+                        num_executors = 1
+
+                    for i in range(num_executors):
+                        executors.append({
+                            "id": f"executor_{i}",
+                            "cores": executor_cores,
+                            "memory_mb": self._parse_memory_string(executor_memory),
+                            "memory_used_mb": 0,
+                        })
+
+                    total_executor_cores = executor_cores * num_executors
+                    total_executor_memory = self._parse_memory_string(executor_memory) * num_executors
 
             return {
                 "mode": master,
                 "driver_memory": driver_memory,
                 "executor_memory": executor_memory,
                 "shuffle_partitions": shuffle_partitions,
-                "total_cores": total_cores,
+                "default_parallelism": sc.defaultParallelism,
                 "executors": executors,
                 "cluster_summary": {
-                    "total_executors": len(executors),
+                    "total_executors": len([e for e in executors if e["id"] != "driver"]),
                     "total_cores": total_executor_cores,
                     "total_memory_mb": total_executor_memory,
-                    "cores_available": total_executor_cores,
-                    "cores_in_use": 0
                 }
             }
         except Exception as e:
-            # Return minimal config on error
+            # Return error info without hardcoded fallbacks
             return {
-                "mode": "local[*]",
+                "mode": "unknown",
                 "error": f"Failed to extract cluster config: {str(e)}",
                 "cluster_summary": {
-                    "total_executors": 1,
-                    "total_cores": multiprocessing.cpu_count(),
-                    "total_memory_mb": 2048,
-                    "cores_available": multiprocessing.cpu_count(),
-                    "cores_in_use": 0
+                    "total_executors": 0,
+                    "total_cores": 0,
+                    "total_memory_mb": 0,
                 }
             }
+
+    def _is_local_mode(self, master: str) -> bool:
+        """
+        Check if Spark is running in local mode.
+
+        Local mode formats:
+        - local
+        - local[N]
+        - local[*]
+        - local[N, F]  (N threads, F max failures)
+
+        NOT local mode:
+        - spark://localhost:7077 (standalone cluster on localhost)
+        - spark://127.0.0.1:7077
+        """
+        return bool(re.match(r'^local(\[\d+\]|\[\*\]|\[\d+,\s*\d+\])?$', master.strip(), re.IGNORECASE))
 
     def _parse_memory_string(self, memory_str: str) -> int:
         """Convert memory string like '2g' or '512m' to MB"""
