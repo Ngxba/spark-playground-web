@@ -1,0 +1,3 @@
+must create by hand spark-events in minio, create a temp folder spark-history with .gitkeep or st to keep it
+backend write to s3a://spark-events/spark-history/ and spark history server read from it
+backend endd to run scripts/download_spark_jars to download jars for pyspark to run

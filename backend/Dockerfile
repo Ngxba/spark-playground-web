@@ -1,12 +1,13 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies, Java (for PySpark), and uv
+# Install system dependencies, Java (for PySpark), PostgreSQL dev libraries, and uv
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
     openjdk-21-jre-headless \
+    libpq-dev \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,8 +1,8 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from app.services.judge_v2 import JudgeV2
+from app.services.execution_simulator import ExecutionSimulator
 from app.models import RunResult, MetricsResult
-from app.models.execution import ExecutionSimulation
 
 
 @pytest.fixture
@@ -31,7 +31,14 @@ def solve(fruits):
 
 @pytest.fixture
 def mock_executor_response():
-    """Mock response from ExecutorV2"""
+    """Mock response from ExecutorV2 with realistic physical plan"""
+    # Realistic physical plan that ExecutionSimulator can parse
+    physical_plan = """
+*(2) Sort [type#10 ASC NULLS FIRST], true, 0
++- Exchange rangepartitioning(type#10 ASC NULLS FIRST, 4), ENSURE_REQUIREMENTS, [plan_id=15]
+   +- *(1) Filter isnotnull(type#10)
+      +- *(1) Scan ExistingRDD[id#9,type#10]
+"""
     return (
         [  # result
             {"id": 1, "type": "apple"},
@@ -43,26 +50,30 @@ def mock_executor_response():
         {  # metadata
             'app_id': 'app-test-123',
             'job_group_id': 'puzzle_execution_group_fruits_123',
-            'logical_plan': 'Sort [type ASC]',
-            'physical_plan': '*(1) Sort [type ASC]',
+            'logical_plan': 'Sort [type ASC]\n+- Filter isnotnull(type)\n   +- Scan ExistingRDD[id,type]',
+            'physical_plan': physical_plan,
             'metrics': {
-                'has_shuffle': False,
+                'has_shuffle': True,
                 'has_broadcast': False,
-                'estimated_stages': 1
+                'estimated_stages': 2
             },
-            'cluster_config': {'total_cores': 2}
+            'cluster_config': {'total_cores': 4, 'shuffle_partitions': 4}
         },
         'puzzle_execution_group_fruits_123'  # job_group_id
     )
 
 
 @pytest.fixture
-def mock_execution_simulation():
-    """Mock ExecutionSimulation"""
-    simulation = Mock(spec=ExecutionSimulation)
-    simulation.stages = []
-    simulation.shuffles = []
-    simulation.partition_count = 4
+def mock_execution_simulation(mock_executor_response):
+    """Generate ExecutionSimulation using real ExecutionSimulator from mock_executor_response metadata"""
+    _, _, _, metadata, _ = mock_executor_response
+
+    simulator = ExecutionSimulator()
+    simulation = simulator.generate_simulation(
+        physical_plan=metadata.get('physical_plan'),
+        logical_plan=metadata.get('logical_plan'),
+        execution_metadata=metadata
+    )
     return simulation
 
 
@@ -79,12 +90,10 @@ class TestJudgeV2:
         assert judge.hint_generator is not None
 
     @patch('app.services.judge_v2.ExecutorV2')
-    @patch('app.services.judge_v2.SparkEventTracker')
     @patch('app.services.judge_v2.ExecutionSimulatorV2')
     def test_evaluate_correct_solution(
         self,
         mock_simulator_class,
-        mock_tracker_class,
         mock_executor_class,
         sample_puzzle_data,
         mock_executor_response,
@@ -108,6 +117,8 @@ class TestJudgeV2:
             sample_puzzle_data['input_data'],
             sample_puzzle_data['expected_output']
         )
+
+        print(result)
 
         # Assertions
         assert isinstance(result, RunResult)

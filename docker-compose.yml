@@ -1,20 +1,7 @@
-services:
-  spark-history:
-    build: ./spark-history
-    container_name: spark-history-server
-    ports:
-      - "18080:18080"  # Spark History Server UI
-    volumes:
-      - spark-events:/tmp/spark-events
-      - ./spark-history/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
-    networks:
-      - spark-playground-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+include:
+  - spark-cluster/docker-compose.yaml
 
+services:
   postgres:
     image: postgres:15
     container_name: spark_playground_db
@@ -42,14 +29,17 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/.env:/app/.env
-      - spark-events:/tmp/spark-events
+      - ./backend/pyspark_jars:/opt/pyspark_jars
     environment:
       - PYTHONUNBUFFERED=1
-      - SPARK_EVENT_LOG_DIR=/tmp/spark-events
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - PYSPARK_PYTHON=python3.12
+      - PYSPARK_DRIVER_PYTHON=python3.12
+      - PYSPARK_JARS_DIR=/opt/pyspark_jars
     depends_on:
       postgres:
         condition: service_healthy
-      spark-history:
+      spark-master:
         condition: service_started
     networks:
       - spark-playground-network
@@ -69,10 +59,30 @@ services:
     networks:
       - spark-playground-network
 
+  minio:
+    image: minio/minio:latest
+    container_name: spark-playground-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # MinIO API
+      - "9001:9001"   # MinIO Console
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - spark-playground-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
 networks:
   spark-playground-network:
     driver: bridge
 
 volumes:
-  spark-events:
   postgres_data:
+  minio_data:

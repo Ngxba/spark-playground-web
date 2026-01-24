@@ -4,6 +4,7 @@ import inspect
 from typing import Any, Dict, Tuple, Optional, List
 import sys
 from io import StringIO
+from pathlib import Path
 import traceback
 import threading
 import time
@@ -32,24 +33,51 @@ class ExecutorV2:
     def _create_spark_session(self) -> SparkSession:
         """Create a new SparkSession for this execution"""
         # Generate unique app name with timestamp
+        master_url = os.getenv("SPARK_MASTER_URL", "spark://localhost:7077")
+        jar_dir = os.getenv("PYSPARK_JARS_DIR", "pyspark_jars")
         app_name = f"SparkPlayground-{int(time.time())}"
-        event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR", "/tmp/spark-events")
+        
+        # Event log configuration - only enable if explicitly configured
+        # event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR", "s3a://spark-events/spark-history/")
+        event_log_dir = os.getenv("SPARK_EVENT_LOG_DIR")
+        use_s3 = event_log_dir.startswith("s3a://") if event_log_dir else False
 
-        # Ensure event log directory exists
-        os.makedirs(event_log_dir, exist_ok=True)
-
-        spark = (SparkSession.builder
-                .master("local[2]")  # Use 2 cores for testing
+        # Build SparkSession with base configuration
+        builder = (SparkSession.builder
+                .master(master_url)
                 .appName(app_name)
-                .config("spark.sql.shuffle.partitions", "4")  # Smaller for local testing
+                .config("spark.sql.shuffle.partitions", "4")
                 .config("spark.driver.memory", "2g")
                 .config("spark.executor.memory", "2g")
-                .config("spark.sql.adaptive.enabled", "true")
-                .config("spark.ui.enabled", "true")  # Enable Spark UI
-                .config("spark.ui.port", "4040")  # Default Spark UI port
-                .config("spark.eventLog.enabled", "true")  # Enable event logging
-                .config("spark.eventLog.dir", f"file://{event_log_dir}")  # Event log directory
-                .getOrCreate())
+                .config("spark.sql.adaptive.enabled", "true"))
+        
+        # Configure event logging only if explicitly set
+        if event_log_dir:
+            builder = builder.config("spark.eventLog.enabled", "true")
+            builder = builder.config("spark.eventLog.dir", event_log_dir)
+            builder = builder.config("spark.eventLog.compress", "false")
+            
+            # Add S3 (MinIO) configuration only if using S3
+            if use_s3:
+                minio_endpoint = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
+                minio_access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+                minio_secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+                
+                builder = (builder
+                    .config("spark.hadoop.fs.s3a.endpoint", minio_endpoint)
+                    .config("spark.hadoop.fs.s3a.access.key", minio_access_key)
+                    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key)
+                    .config("spark.hadoop.fs.s3a.path.style.access", "true")
+                    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+                    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
+                    .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"))
+        
+        jars = [str(p) for p in Path(jar_dir).glob("*.jar")] if Path(jar_dir).is_dir() else []
+
+        if jars:
+            builder = builder.config("spark.jars", ",".join(jars))
+
+        spark = builder.getOrCreate()
         return spark
 
     def _get_cluster_config(self, spark: SparkSession) -> Dict[str, Any]:
@@ -151,8 +179,11 @@ class ExecutorV2:
 
     def _stop_spark_session(self, spark: SparkSession):
         """Stop the SparkSession and clean up resources"""
+        import time
         try:
             spark.stop()
+            # Small delay to ensure event logs are flushed to disk
+            time.sleep(0.5)
         except Exception as e:
             print(f"Warning: Error stopping SparkSession: {e}", file=sys.stderr)
 
@@ -465,7 +496,13 @@ class ExecutorV2:
         try:
             # 1. Create SparkSession
             spark = self._create_spark_session()
+            sc = spark.sparkContext
+            print("spark.driver.host =", sc.getConf().get("spark.driver.host"))
+            print("spark.driver.bindAddress =", sc.getConf().get("spark.driver.bindAddress"))
+            print("spark.driver.port =", sc.getConf().get("spark.driver.port"))
+            print("spark.blockManager.port =", sc.getConf().get("spark.blockManager.port"))
             app_id = spark.sparkContext.applicationId
+            print("Spark UI:", spark.sparkContext.uiWebUrl)
 
             # 2. Convert input data to Spark DataFrames
             spark_dfs = {}

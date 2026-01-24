@@ -1,0 +1,39 @@
+services:
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark_master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    ports:
+      - "7077:7077"   # master RPC (what your code submits to)
+      - "8080:8080"   # master web UI
+    networks:
+      - spark-playground-network
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: spark-worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+      - PYSPARK_PYTHON=python3.12
+      - PYSPARK_DRIVER_PYTHON=python3.12
+    depends_on:
+      - spark-master
+    networks:
+      - spark-playground-network
+
+  spark-history:
+    build:
+      context: .
+      dockerfile: Dockerfile.history_server
+    container_name: spark-history
+    ports:
+      - "18080:18080"
+    depends_on:
+      - spark-master
+    networks:
+      - spark-playground-network
