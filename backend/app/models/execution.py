@@ -60,6 +60,14 @@ class Node(BaseModel):
     memory_gb: float = Field(description="Available memory in GB")
     assigned_tasks: List[int] = Field(default_factory=list, description="IDs of tasks assigned to this node")
 
+class ExecutorInfo(BaseModel):
+    id: str = Field(description="Node ID")
+    host: str = Field(description="Host Address")
+    port: int = Field(description="Port use")
+    cores: int = Field(description="Number of CPU cores")
+    memory_mb: float = Field(description="Available memory in MB")
+    memory_overhead_mb: float = Field(description="Memory overhead in MB")
+
 class SimulationEvent(BaseModel):
     """Timeline event for animation"""
     time: float = Field(description="Event timestamp in seconds")

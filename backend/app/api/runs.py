@@ -73,8 +73,23 @@ async def get_run_detail(
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
+    # Truncate output and expected_output for response payload
+    PREVIEW_LIMIT = 20
+    output = run.output_data.output_data_json if run.output_data else None
+    expected_output = run.output_data.expected_output_json if run.output_data else None
+
+    output_total = None
+    if isinstance(output, list) and len(output) > PREVIEW_LIMIT:
+        output_total = len(output)
+        output = output[:PREVIEW_LIMIT]
+
+    expected_output_total = None
+    if isinstance(expected_output, list) and len(expected_output) > PREVIEW_LIMIT:
+        expected_output_total = len(expected_output)
+        expected_output = expected_output[:PREVIEW_LIMIT]
+
     # Reconstruct RunResult from database
-    return {
+    result = {
         "id": str(run.id),
         "puzzle_id": run.puzzle_id,
         "user_code": run.user_code,
@@ -95,10 +110,19 @@ async def get_run_detail(
         "stage_flow": run.execution_data.stage_flow_json if run.execution_data else None,
         "cluster_config": run.execution_data.cluster_config_json if run.execution_data else None,
         "dag_structure": run.execution_data.dag_structure_json if run.execution_data else None,
+        "executors_info": run.execution_data.executors_info_json if run.execution_data else None,
         "physical_plan": run.execution_plan.physical_plan if run.execution_plan else None,
         "logical_plan": run.execution_plan.logical_plan if run.execution_plan else None,
         "spark_ui_url": run.execution_plan.spark_ui_url if run.execution_plan else None,
-        "output": run.output_data.output_data_json if run.output_data else None,
-        "expected_output": run.output_data.expected_output_json if run.output_data else None,
+        "output": output,
+        "expected_output": expected_output,
         "created_at": run.created_at.isoformat()
     }
+
+    # Add totals if truncation occurred
+    if output_total is not None:
+        result["output_total"] = output_total
+    if expected_output_total is not None:
+        result["expected_output_total"] = expected_output_total
+
+    return result

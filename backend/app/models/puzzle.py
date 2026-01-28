@@ -1,6 +1,7 @@
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional, Literal
+from pydantic import BaseModel, Field, validator
 from .enums import Difficulty, ConceptTag
+from .execution import ExecutorInfo
 
 class PuzzleMetadata(BaseModel):
     """Basic puzzle information for listing"""
@@ -20,9 +21,27 @@ class Puzzle(PuzzleMetadata):
     optimal_solution: str = Field(description="Reference optimal solution")
     visualization_config: Optional[Dict[str, Any]] = Field(default=None)
 
+class SparkConfig(BaseModel):
+    """Optional Spark configuration overrides from the frontend.
+
+    All fields default to None — the executor falls back to settings.*
+    when a field is not explicitly provided by the frontend.
+    """
+    shuffle_partitions: Optional[int] = Field(default=None, ge=1, le=200)
+    executor_cores: Optional[int] = Field(default=None, ge=1, le=10)
+    executor_memory: Optional[str] = Field(default=None)
+
+    @validator("executor_memory")
+    def validate_executor_memory(cls, v):
+        if v is not None and v not in ("512m", "1g", "2g", "4g"):
+            raise ValueError("executor_memory must be one of: 512m, 1g, 2g, 4g")
+        return v
+
+
 class RunRequest(BaseModel):
     """Request to run user code"""
     code: str = Field(description="User's Python/PySpark code")
+    spark_config: Optional[SparkConfig] = Field(default=None, description="Optional Spark config overrides")
 
 class MetricsResult(BaseModel):
     """Performance metrics from execution"""
@@ -37,6 +56,7 @@ class RunResult(BaseModel):
     """Result of code execution"""
     correct: bool = Field(description="Whether output matches expected result")
     output: Optional[Any] = Field(description="Actual output from code execution")
+    expected_output: Optional[Any] = Field(default=None, description="Expected output for comparison")
     user_code: Optional[str] = Field(default=None, description="The user code that was executed")
     metrics: MetricsResult
     stars: int = Field(ge=0, le=3, description="Star rating (0-3)")
@@ -50,3 +70,4 @@ class RunResult(BaseModel):
     execution_simulation: Optional[Any] = Field(default=None, description="Execution simulation data for Factory View visualization")
     stage_flow: Optional[Dict[str, Any]] = Field(default=None, description="Stage-by-stage execution flow for interactive visualization")
     cluster_config: Optional[Dict[str, Any]] = Field(default=None, description="Spark cluster configuration and resource information")
+    executors_info: Optional[List[ExecutorInfo]] = Field(default=None, description="Spark executors information")

@@ -37,7 +37,7 @@ def mock_execution_tree():
                                 'task_id': 0,
                                 'index': 0,
                                 'partition_id': 0,
-                                'executor_id': 'driver',
+                                'executor_id': '0',
                                 'launch_time': 1640000000000,
                                 'finish_time': 1640000000500,
                                 'duration': 500,
@@ -47,7 +47,7 @@ def mock_execution_tree():
                                 'task_id': 1,
                                 'index': 1,
                                 'partition_id': 1,
-                                'executor_id': 'driver',
+                                'executor_id': '1',
                                 'launch_time': 1640000000000,
                                 'finish_time': 1640000000600,
                                 'duration': 600,
@@ -69,7 +69,7 @@ def mock_execution_tree():
                                 'task_id': 2,
                                 'index': 0,
                                 'partition_id': 0,
-                                'executor_id': 'driver',
+                                'executor_id': '0',
                                 'launch_time': 1640000002000,
                                 'finish_time': 1640000002500,
                                 'duration': 500,
@@ -99,10 +99,16 @@ Aggregate
 +- Relation
 """,
         'cluster_config': {
-            'mode': 'local[2]',
-            'total_cores': 2,
-            'cluster_summary': {
-                'total_cores': 2
+            'mode': 'spark://master:7077',
+            'executors': [
+                {'id': 'driver', 'host': 'driver-host', 'cores': 0, 'memory_mb': 1024},
+                {'id': '0', 'host': 'worker-0', 'cores': 4, 'memory_mb': 2048},
+                {'id': '1', 'host': 'worker-1', 'cores': 4, 'memory_mb': 2048},
+            ],
+            'cluster_capacity': {
+                'total_workers': 2,
+                'total_cores': 8,
+                'total_memory_mb': 4096,
             }
         }
     }
@@ -186,17 +192,21 @@ class TestExecutionSimulatorV2:
         assert len(stages[0].tasks) == 2
         assert len(stages[1].tasks) == 1
 
-    def test_convert_tasks(self, mock_event_tracker: SparkEventTracker):
+    def test_convert_tasks(self, mock_event_tracker: SparkEventTracker, mock_execution_tree: dict[str, any], mock_metadata: dict[str, any]):
         """Test task conversion"""
         simulator = ExecutionSimulatorV2(mock_event_tracker)
         simulator.baseline_time = 1640000000.0
+
+        # Build nodes first so _executor_to_node_map is populated
+        cluster_config = mock_metadata['cluster_config']
+        simulator._build_nodes_from_executors(mock_execution_tree, cluster_config)
 
         tasks_data = [
             {
                 'task_id': 0,
                 'index': 0,
                 'partition_id': 0,
-                'executor_id': 'driver',
+                'executor_id': '0',
                 'launch_time': 1640000000000,
                 'finish_time': 1640000000500,
                 'duration': 500,
@@ -212,6 +222,7 @@ class TestExecutionSimulatorV2:
         assert tasks[0].id == 0
         assert tasks[0].partition_id == 0
         assert tasks[0].duration == 0.5  # Converted to seconds
+        assert tasks[0].node_id == 0  # Mapped from executor '0'
 
     def test_extract_all_tasks(self, mock_event_tracker: SparkEventTracker, mock_execution_tree: dict[str, any]):
         """Test extracting all tasks from stages"""
@@ -252,12 +263,16 @@ class TestExecutionSimulatorV2:
         simulator = ExecutionSimulatorV2(mock_event_tracker)
         nodes = simulator._build_nodes_from_executors(mock_execution_tree, mock_metadata['cluster_config'])
 
-        # Assertions
-        assert len(nodes) > 0
+        # Assertions — cluster mode with 2 worker executors (driver is skipped)
+        assert len(nodes) == 2
         assert all(isinstance(node, Node) for node in nodes)
         for node in nodes:
-            assert node.cores > 0
-            assert node.memory_gb > 0
+            assert node.cores == 4  # Per-executor cores from cluster_config
+            assert node.memory_gb == 2.0  # 2048 MB -> 2.0 GB
+
+        # Verify executor-to-node mapping was populated
+        assert simulator._executor_to_node_map == {'0': 0, '1': 1}
+        assert simulator._nodes_list is nodes
 
     def test_build_timeline_events(self, mock_event_tracker: SparkEventTracker, mock_execution_tree: dict[str, any]):
         """Test building timeline events"""

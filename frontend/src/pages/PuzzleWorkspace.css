@@ -687,6 +687,61 @@
   box-shadow: 0 0 15px var(--color-primary-glow);
 }
 
+/* Spark Config Controls */
+.spark-config-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.config-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.config-select {
+  padding: 8px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Rajdhani', sans-serif;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.config-select:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-elevated);
+}
+
+.config-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
+.config-select option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
 .visualization-toggle {
   display: flex;
   align-items: center;
@@ -1270,6 +1325,19 @@
 
   .editor-bottom-panel {
     height: 250px;
+  }
+
+  .spark-config-controls {
+    gap: 8px;
+  }
+
+  .config-label {
+    display: none;
+  }
+
+  .config-select {
+    padding: 6px 8px;
+    font-size: 12px;
   }
 }
 

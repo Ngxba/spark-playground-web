@@ -1,4 +1,6 @@
 from typing import List, Dict, Any, Optional
+from datetime import datetime
+import re
 from app.models.execution import (
     ExecutionSimulation,
     Stage,
@@ -22,11 +24,50 @@ class ExecutionSimulatorV2:
     def __init__(self, event_tracker: SparkEventTracker):
         self.event_tracker = event_tracker
 
+    def _parse_timestamp(self, timestamp: Any) -> int:
+        """
+        Parse Spark API timestamp to milliseconds.
+
+        Spark API returns timestamps as ISO strings like "2026-01-25T16:38:44.797GMT"
+        or sometimes as epoch milliseconds.
+
+        Args:
+            timestamp: ISO string, epoch milliseconds (int), or None
+
+        Returns:
+            Timestamp in milliseconds (0 if None or unparseable)
+        """
+        if timestamp is None:
+            return 0
+
+        # Already a number (epoch ms)
+        if isinstance(timestamp, (int, float)):
+            return int(timestamp)
+
+        # ISO string format: "2026-01-25T16:38:44.797GMT"
+        if isinstance(timestamp, str):
+            try:
+                # Remove GMT suffix and parse
+                ts_str = timestamp.replace('GMT', '').strip()
+                dt = datetime.strptime(ts_str, '%Y-%m-%dT%H:%M:%S.%f')
+                return int(dt.timestamp() * 1000)
+            except ValueError:
+                try:
+                    # Try without milliseconds
+                    ts_str = timestamp.replace('GMT', '').strip()
+                    dt = datetime.strptime(ts_str, '%Y-%m-%dT%H:%M:%S')
+                    return int(dt.timestamp() * 1000)
+                except ValueError:
+                    return 0
+
+        return 0
+
     def generate_simulation_from_events(
         self,
         app_id: str,
         job_group_id: str,
-        metadata: Dict[str, Any]
+        metadata: Dict[str, Any],
+        execution_tree: Optional[Dict[str, Any]] = None
     ) -> Optional[ExecutionSimulation]:
         """
         Generate ExecutionSimulation from REAL Spark data.
@@ -35,12 +76,15 @@ class ExecutionSimulatorV2:
             app_id: Spark application ID
             job_group_id: Job group ID for filtering
             metadata: Execution metadata from executor (contains query plans)
+            execution_tree: Pre-fetched execution tree from active Spark UI.
+                            If provided, skips the History Server fetch entirely.
 
         Returns:
             ExecutionSimulation with real data, or None if data unavailable
         """
-        # Fetch real execution tree from Spark REST API
-        execution_tree = self.event_tracker.wait_for_events(app_id, job_group_id)
+        # Use pre-fetched tree if available, otherwise fall back to History Server
+        if execution_tree is None:
+            execution_tree = self.event_tracker.wait_for_events(app_id, job_group_id)
 
         if not execution_tree or not execution_tree.get('jobs'):
             print("Warning: No execution data available, cannot generate simulation")
@@ -51,17 +95,22 @@ class ExecutionSimulatorV2:
         # Extract cluster config from metadata
         cluster_config = metadata.get('cluster_config', {})
 
+        # Build nodes FIRST so _executor_to_node_map is available for _convert_tasks
+        nodes = self._build_nodes_from_executors(execution_tree, cluster_config)
+
         # Convert execution tree to simulation models
         stages = self._convert_stages(execution_tree)
         all_tasks = self._extract_all_tasks(stages)
         partitions = self._build_partitions_from_tasks(all_tasks, stages)
         shuffles = self._detect_shuffles(execution_tree, metadata)
-        nodes = self._build_nodes_from_executors(execution_tree, cluster_config)
         events = self._build_timeline_events(stages, all_tasks, shuffles)
 
-        # Calculate metrics
-        total_duration = self._calculate_total_duration(stages)
-        partition_count = len(set(task.partition_id for task in all_tasks))
+        # Calculate metrics - use job-level timestamps for accurate total duration
+        total_duration = self._calculate_total_duration_from_jobs(execution_tree)
+        # Use the max task count from any single stage as the runtime partition
+        # count.  Each task processes one partition, and partition IDs restart
+        # from 0 per stage so counting unique IDs across stages is unreliable.
+        partition_count = max((len(stage.tasks) for stage in stages), default=0)
 
         return ExecutionSimulation(
             total_duration=total_duration,
@@ -93,8 +142,9 @@ class ExecutionSimulatorV2:
         for job in execution_tree['jobs']:
             for stage_data in job['stages']:
                 # Convert timestamps to relative time (seconds from start)
-                submission_time = stage_data.get('submission_time', 0)
-                completion_time = stage_data.get('completion_time', submission_time)
+                # Parse ISO timestamps from Spark API to milliseconds
+                submission_time = self._parse_timestamp(stage_data.get('submission_time'))
+                completion_time = self._parse_timestamp(stage_data.get('completion_time')) or submission_time
 
                 # First stage's submission time is our baseline
                 if stage_id_counter == 0:
@@ -158,21 +208,24 @@ class ExecutionSimulatorV2:
         tasks = []
 
         for task_data in tasks_data:
-            launch_time = task_data.get('launch_time', 0)
-            finish_time = task_data.get('finish_time', launch_time)
+            # Parse ISO timestamps from Spark API to milliseconds
+            launch_time = self._parse_timestamp(task_data.get('launch_time'))
+            finish_time = self._parse_timestamp(task_data.get('finish_time')) or launch_time
 
             # Convert to relative time (seconds from baseline)
             start_time = (launch_time / 1000.0) - self.baseline_time
             end_time = (finish_time / 1000.0) - self.baseline_time
-            duration = task_data.get('duration', 0) / 1000.0  # Convert ms to seconds
+            duration = (task_data.get('duration') or 0) / 1000.0  # Convert ms to seconds
 
             # Extract executor info for node mapping
             executor_id = task_data.get('executor_id', 'driver')
-            # Map executor to node_id (simplified: use hash of executor_id)
-            node_id = abs(hash(executor_id)) % 2  # Limit to 2 nodes for local mode
+            # Map executor to node_id using the mapping built by _build_nodes_from_executors
+            node_id = getattr(self, '_executor_to_node_map', {}).get(str(executor_id), 0)
 
-            # Extract core ID (simplified: use task index % cores)
-            core_id = task_data.get('index', 0) % 2
+            # Extract core ID using actual node core count
+            nodes_list = getattr(self, '_nodes_list', [])
+            node_cores = nodes_list[node_id].cores if node_id < len(nodes_list) else 2
+            core_id = task_data.get('index', 0) % max(node_cores, 1)
 
             task = Task(
                 id=task_data.get('task_id', 0),
@@ -296,7 +349,13 @@ class ExecutionSimulatorV2:
         cluster_config: Dict
     ) -> List[Node]:
         """
-        Build Node models from executor information.
+        Build Node models from cluster_config executor list.
+
+        Uses cluster_config['executors'] for accurate per-executor cores and memory.
+        Falls back to extracting executors from tasks if cluster_config is incomplete.
+
+        Populates self._executor_to_node_map and self._nodes_list for use by
+        _convert_tasks().
 
         Args:
             execution_tree: Execution tree with executor data
@@ -305,27 +364,56 @@ class ExecutionSimulatorV2:
         Returns:
             List of Node models
         """
-        # Extract unique executors from tasks
-        executors = set()
-        for job in execution_tree['jobs']:
-            for stage in job['stages']:
-                for task in stage.get('tasks', []):
-                    executor_id = task.get('executor_id', 'driver')
-                    executors.add(executor_id)
+        self._executor_to_node_map: Dict[str, int] = {}
+        nodes: List[Node] = []
 
-        # Get cores from cluster config
-        cores_per_node = cluster_config.get('cluster_summary', {}).get('total_cores', 2)
+        executors_list = cluster_config.get('executors', [])
+        mode = cluster_config.get('mode', '')
+        is_local = bool(re.match(r'^local(\[.*\])?$', mode.strip(), re.IGNORECASE)) if mode else False
 
-        nodes = []
-        for i, executor_id in enumerate(sorted(executors)):
-            node = Node(
-                id=i,
-                name=f"Executor {executor_id}",
-                cores=cores_per_node,
-                memory_gb=2.0,  # From cluster config
-                assigned_tasks=[]
-            )
-            nodes.append(node)
+        if executors_list:
+            # Use cluster_config executors (authoritative source)
+            node_id = 0
+            for executor in executors_list:
+                eid = str(executor.get('id', ''))
+                # In cluster mode, skip the driver entry (it doesn't run tasks)
+                if eid == 'driver' and not is_local:
+                    continue
+
+                cores = executor.get('cores', 2)
+                memory_mb = executor.get('memory_mb', 2048)
+
+                node = Node(
+                    id=node_id,
+                    name=f"Executor {eid}",
+                    cores=cores,
+                    memory_gb=round(memory_mb / 1024, 1),
+                    assigned_tasks=[]
+                )
+                nodes.append(node)
+                self._executor_to_node_map[eid] = node_id
+                node_id += 1
+        else:
+            # Fallback: extract unique executors from tasks
+            executors = set()
+            for job in execution_tree['jobs']:
+                for stage in job['stages']:
+                    for task in stage.get('tasks', []):
+                        executor_id = task.get('executor_id', 'driver')
+                        executors.add(executor_id)
+
+            cores_per_node = cluster_config.get('cluster_capacity', {}).get('total_cores', 2)
+
+            for i, executor_id in enumerate(sorted(executors)):
+                node = Node(
+                    id=i,
+                    name=f"Executor {executor_id}",
+                    cores=cores_per_node,
+                    memory_gb=2.0,
+                    assigned_tasks=[]
+                )
+                nodes.append(node)
+                self._executor_to_node_map[str(executor_id)] = i
 
         # If no executors found, create default node
         if not nodes:
@@ -336,7 +424,9 @@ class ExecutionSimulatorV2:
                 memory_gb=2.0,
                 assigned_tasks=[]
             ))
+            self._executor_to_node_map['driver'] = 0
 
+        self._nodes_list = nodes
         return nodes
 
     def _build_timeline_events(
@@ -412,14 +502,51 @@ class ExecutionSimulatorV2:
 
         return events
 
-    def _calculate_total_duration(self, stages: List[Stage]) -> float:
-        """Calculate total execution duration from stages."""
-        if not stages:
+    def _calculate_total_duration_from_jobs(self, execution_tree: Dict) -> float:
+        """
+        Calculate total execution duration from job-level timestamps.
+
+        This is more accurate than summing stage durations because:
+        - Stages may run in parallel
+        - Job timestamps represent the actual wall-clock time
+
+        Args:
+            execution_tree: Execution tree from SparkEventTracker
+
+        Returns:
+            Total duration in seconds
+        """
+        jobs = execution_tree.get('jobs', [])
+        if not jobs:
             return 0.0
 
-        start_time = min(stage.start_time for stage in stages)
-        end_time = max(stage.end_time for stage in stages)
-        return end_time - start_time
+        # Find earliest submission time and latest completion time across all jobs
+        submission_times = []
+        completion_times = []
+
+        for job in jobs:
+            submission_time = self._parse_timestamp(job.get('submission_time'))
+            completion_time = self._parse_timestamp(job.get('completion_time'))
+
+            if submission_time:
+                submission_times.append(submission_time)
+            if completion_time:
+                completion_times.append(completion_time)
+
+        if not submission_times or not completion_times:
+            # Fallback to stage-based calculation
+            print("Warning: Missing job timestamps, falling back to stage-based duration")
+            return 0.0
+
+        # Calculate duration: latest completion - earliest submission
+        earliest_start = min(submission_times)
+        latest_end = max(completion_times)
+
+        # Convert from milliseconds to seconds
+        duration_seconds = (latest_end - earliest_start) / 1000.0
+
+        print(f"Total duration calculated from jobs: {duration_seconds:.3f} seconds")
+        return duration_seconds
 
     def _calculate_metrics(self, execution_tree: Dict) -> Dict[str, Any]:
         """

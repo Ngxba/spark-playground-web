@@ -1,7 +1,10 @@
 services:
   spark-master:
-    image: apache/spark:3.5.0
-    container_name: spark_master
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    image: spark-base:3.5.0
+    container_name: spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       - SPARK_NO_DAEMONIZE=true
@@ -15,6 +18,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+      args:
+        BASE_IMAGE: spark-base:3.5.0
     container_name: spark-worker
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
@@ -30,6 +35,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.history_server
+      args:
+        BASE_IMAGE: spark-base:3.5.0
     container_name: spark-history
     ports:
       - "18080:18080"

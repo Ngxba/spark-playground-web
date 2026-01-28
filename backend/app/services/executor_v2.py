@@ -1,5 +1,4 @@
 from pyspark.sql import SparkSession, DataFrame as SparkDataFrame
-from pyspark.sql.functions import col, broadcast, sum, count, avg, when, lit
 import inspect
 from typing import Any, Dict, Tuple, Optional, List
 import sys
@@ -12,9 +11,11 @@ import re
 import boto3
 from botocore.client import Config
 from urllib.parse import urlparse
-
+from app.models.puzzle import SparkConfig
 from app.config import settings
-
+import json
+from urllib.request import urlopen
+from app.models.execution import ExecutorInfo
 
 class TimeoutException(Exception):
     pass
@@ -68,9 +69,26 @@ class ExecutorV2:
         # Create marker object (idempotent)
         s3.put_object(Bucket=bucket, Key=marker_key, Body=b"")
 
-    def _create_spark_session(self) -> SparkSession:
+    def _create_spark_session(self, spark_config: Optional[SparkConfig]) -> SparkSession:
         """Create a new SparkSession for this execution"""
         app_name = f"SparkPlayground-{int(time.time())}"
+
+        # Resolve config: use spark_config overrides if provided, else settings defaults
+        shuffle_partitions = str(
+            spark_config.shuffle_partitions
+            if spark_config and spark_config.shuffle_partitions is not None
+            else settings.spark_shuffle_partitions
+        )
+        executor_cores = str(
+            spark_config.executor_cores
+            if spark_config and spark_config.executor_cores is not None
+            else settings.spark_executor_cores
+        )
+        executor_memory = (
+            spark_config.executor_memory
+            if spark_config and spark_config.executor_memory is not None
+            else settings.spark_executor_memory
+        )
 
         # Get configuration from settings
         event_log_dir = settings.spark_event_log_dir
@@ -80,10 +98,21 @@ class ExecutorV2:
         builder = (SparkSession.builder
                 .master(settings.spark_master_url)
                 .appName(app_name)
-                .config("spark.sql.shuffle.partitions", str(settings.spark_shuffle_partitions))
+                .config("spark.sql.shuffle.partitions", shuffle_partitions)
                 .config("spark.driver.memory", settings.spark_driver_memory)
-                .config("spark.executor.memory", settings.spark_executor_memory)
-                .config("spark.sql.adaptive.enabled", "true"))
+                .config("spark.executor.memory", executor_memory)
+                .config("spark.executor.cores", executor_cores)
+                .config("spark.sql.adaptive.enabled", "false")
+                # Disk space optimization configs
+                # .config("spark.broadcast.compress", "true")  # Compress broadcast variables
+                # .config("spark.shuffle.compress", "true")    # Compress shuffle data
+                # .config("spark.shuffle.spill.compress", "true")  # Compress spilled data
+                # .config("spark.io.compression.codec", "lz4")  # Fast compression codec
+                # .config("spark.memory.fraction", "0.8")  # 80% memory for execution/storage
+                # .config("spark.memory.storageFraction", "0.3")  # 30% of that for storage
+                # .config("spark.cleaner.referenceTracking.cleanCheckpoints", "true")  # Clean checkpoints
+                # .config("spark.shuffle.service.enabled", "false")  # Disable external shuffle (not needed for standalone)
+        )
 
         # Configure event logging only if explicitly set
         if event_log_dir:
@@ -117,7 +146,232 @@ class ExecutorV2:
             builder = builder.config("spark.jars", ",".join(jars))
 
         spark = builder.getOrCreate()
+
+        # Explicitly set SQL runtime configs AFTER getOrCreate() to guarantee
+        # they take effect even if a session was reused (builder.config() alone
+        # does not reliably apply SQL configs on an existing session).
+        spark.conf.set("spark.sql.shuffle.partitions", shuffle_partitions)
+        spark.conf.set("spark.sql.adaptive.enabled", "false")
+
         return spark
+
+    def _calculate_memory_overhead(self, memory_mb: int, overhead_factor: float = 0.1, min_overhead_mb: int = 384) -> int:
+        """
+        Calculate memory overhead following Spark's default formula.
+
+        Spark's default: max(384MB, 10% of executor/driver memory)
+
+        Args:
+            memory_mb: Base memory in MB
+            overhead_factor: Percentage of memory for overhead (default 0.1 = 10%)
+            min_overhead_mb: Minimum overhead in MB (default 384MB)
+
+        Returns:
+            Memory overhead in MB
+        """
+        calculated_overhead = int(memory_mb * overhead_factor)
+        return max(min_overhead_mb, calculated_overhead)
+
+    def _get_standalone_cluster_capacity(self):
+        url = settings.spark_master_ui_url.rstrip("/") + "/json/"
+        data = json.load(urlopen(url))
+
+        workers = data.get("workers", [])
+
+        # NOTE: cannot use sum() here — pyspark.sql.functions.sum shadows the builtin.
+        total_cores = 0
+        total_mem_mb = 0
+        for w in workers:
+            total_cores += w.get("cores", 0)
+            total_mem_mb += w.get("memory", 0)
+
+        return {
+            "total_workers": len(workers),
+            "total_cores": total_cores,
+            "total_memory_mb": total_mem_mb,
+        }
+
+    def _get_executors_info(self, spark: SparkSession) -> List[ExecutorInfo]:
+        """
+        Extract executor information from SparkContext.
+
+        Dynamically queries the Spark cluster for actual executor information
+        using statusTracker and getExecutorMemoryStatus.
+
+        Note: Executors are dynamically created per job and terminated after,
+        so this captures the state at the time of the call.
+
+        Returns:
+            List of executor information dictionaries
+        """
+        sc = spark.sparkContext
+        conf = sc.getConf()
+        executors = []
+        master = conf.get("spark.master", "unknown")
+        driver_memory = conf.get("spark.driver.memory", "unknown")
+        executor_memory = conf.get("spark.executor.memory", "unknown")
+
+        # Get memory overhead configs
+        driver_memory_mb = self._parse_memory_string(driver_memory)
+        executor_memory_mb = self._parse_memory_string(executor_memory)
+
+        # Get or calculate driver memory overhead
+        driver_overhead_str = conf.get("spark.driver.memoryOverhead", None)
+        if driver_overhead_str:
+            driver_overhead_mb = self._parse_memory_string(driver_overhead_str)
+        else:
+            driver_overhead_mb = self._calculate_memory_overhead(driver_memory_mb)
+
+        # Get or calculate executor memory overhead
+        executor_overhead_str = conf.get("spark.executor.memoryOverhead", None)
+        if executor_overhead_str:
+            executor_overhead_mb = self._parse_memory_string(executor_overhead_str)
+        else:
+            executor_overhead_mb = self._calculate_memory_overhead(executor_memory_mb)
+
+        if self._is_local_mode(master):
+            # Local mode - driver acts as executor (single JVM)
+            import multiprocessing
+            if "[*]" in master:
+                num_cores = multiprocessing.cpu_count()
+            elif "[" in master:
+                try:
+                    num_cores = int(master.split("[")[1].split("]")[0])
+                except:
+                    num_cores = 1
+            else:
+                num_cores = 1
+
+            executors = [ExecutorInfo(
+                id="driver",
+                host=master,
+                port=0,
+                cores=num_cores,
+                memory_mb=driver_memory_mb,
+                memory_overhead_mb=driver_overhead_mb
+            )]
+            
+        else:
+            # Cluster mode - query actual executor info using statusTracker
+            try:
+                executor_infos = sc._jsc.sc().statusTracker().getExecutorInfos()
+
+                # Driver host from config — used to identify the driver entry
+                # among executor_infos (SparkExecutorInfo has no executorId field).
+                driver_host = conf.get("spark.driver.host", "")
+
+                # Get memory status per executor (includes driver)
+                executor_memory_status = sc._jsc.sc().getExecutorMemoryStatus()
+
+                def get_attr_safe(obj, attr):
+                    """Safely get attribute, handling both method and property access (py4j)"""
+                    val = getattr(obj, attr, None)
+                    if val is not None:
+                        if callable(val):
+                            try:
+                                return val()
+                            except Exception:
+                                return None
+                        return val
+                    # Java-style getter fallback: attr -> getAttr()
+                    getter_name = 'get' + attr[0].upper() + attr[1:]
+                    getter = getattr(obj, getter_name, None)
+                    if getter is not None and callable(getter):
+                        try:
+                            return getter()
+                        except Exception:
+                            return None
+                    return None
+
+                # First pass: count workers (non-driver) to compute cores_per_executor
+                worker_count = 0
+                for executor_info in executor_infos:
+                    host = get_attr_safe(executor_info, 'host') or "localhost"
+                    if host != driver_host:
+                        worker_count += 1
+
+                # Get cores per executor from config
+                cores_per_executor = conf.get("spark.executor.cores", None)
+                if cores_per_executor:
+                    try:
+                        cores_per_executor = int(cores_per_executor)
+                    except:
+                        cores_per_executor = None
+
+                # If not in config, estimate from defaultParallelism
+                if not cores_per_executor:
+                    default_parallelism = sc.defaultParallelism
+                    cores_per_executor = max(1, default_parallelism // max(1, worker_count)) if worker_count > 0 else 1
+
+                # Second pass: build executor info list
+                driver_found = False
+                worker_idx = 0
+                for executor_info in executor_infos:
+                    host = get_attr_safe(executor_info, 'host') or "localhost"
+                    port = get_attr_safe(executor_info, 'port') or 0
+
+                    # Identify the driver by matching host with spark.driver.host.
+                    # Only the first match counts (avoids false positives when
+                    # driver and workers happen to share a host).
+                    is_driver = (not driver_found and host == driver_host)
+                    if is_driver:
+                        driver_found = True
+                        executor_id = "driver"
+                    else:
+                        executor_id = str(worker_idx)
+                        worker_idx += 1
+
+                    # Get memory info if available
+                    memory_mb = 0
+                    try:
+                        mem_tuple = None
+                        for key in [f"{host}:{port}", executor_id]:
+                            try:
+                                mem_tuple = executor_memory_status.apply(key)
+                                break
+                            except Exception:
+                                continue
+
+                        if mem_tuple is not None:
+                            max_mem_bytes = mem_tuple._1() if hasattr(mem_tuple, '_1') else 0
+                            memory_mb = int(max_mem_bytes / (1024 * 1024))
+                    except Exception:
+                        pass  # Memory info not available
+
+                    executor_data = ExecutorInfo(
+                        id=executor_id,
+                        host=host,
+                        port=port,
+                        cores=cores_per_executor if not is_driver else 0,
+                        memory_mb=memory_mb,
+                        memory_overhead_mb=driver_overhead_mb if is_driver else executor_overhead_mb
+                    )
+                    executors.append(executor_data)
+
+            except Exception as e:
+                # Fallback: use configuration values
+                print(f"Warning: Failed to get executor info from statusTracker: {e}")
+                executor_cores = conf.get("spark.executor.cores", "1")
+                num_executors = conf.get("spark.executor.instances", "1")
+
+                try:
+                    executor_cores = int(executor_cores)
+                    num_executors = int(num_executors)
+                except:
+                    executor_cores = 1
+                    num_executors = 1
+
+                for i in range(num_executors):
+                    executors.append(ExecutorInfo(
+                        id=str(i),
+                        host="unknown",
+                        port=0,
+                        cores=executor_cores,
+                        memory_mb=executor_memory_mb,
+                        memory_overhead_mb=executor_overhead_mb
+                    ))
+
+        return executors
 
     def _get_cluster_config(self, spark: SparkSession) -> Dict[str, Any]:
         """
@@ -136,11 +390,41 @@ class ExecutorV2:
             sc = spark.sparkContext
             conf = sc.getConf()
 
+            cluster_capacity_info = self._get_standalone_cluster_capacity()
             # Extract configuration values from actual Spark config
-            master = conf.get("spark.master", "unknown")
+            master = conf.get("spark.master", "")
+            spark_mode = next(
+                (
+                    mode for mode, match in {
+                        "local": master.startswith("local"),
+                        "standalone": master.startswith("spark://"),
+                        "yarn": master == "yarn",
+                        "kubernetes": master.startswith("k8s://"),
+                        "mesos": master.startswith("mesos://"),
+                    }.items()
+                    if match
+                ),
+                "unknown",
+            )
             driver_memory = conf.get("spark.driver.memory", "unknown")
             executor_memory = conf.get("spark.executor.memory", "unknown")
+            executor_cores = conf.get("spark.executor.cores", "unknown")
             shuffle_partitions = conf.get("spark.sql.shuffle.partitions", "unknown")
+
+            # Get memory overhead with fallback to calculated value
+            driver_memory_overhead_str = conf.get("spark.driver.memoryOverhead", None)
+            if driver_memory_overhead_str:
+                driver_memory_overhead = driver_memory_overhead_str
+            else:
+                driver_memory_mb = self._parse_memory_string(driver_memory)
+                driver_memory_overhead = f"{self._calculate_memory_overhead(driver_memory_mb)}m"
+
+            executor_memory_overhead_str = conf.get("spark.executor.memoryOverhead", None)
+            if executor_memory_overhead_str:
+                executor_memory_overhead = executor_memory_overhead_str
+            else:
+                executor_memory_mb = self._parse_memory_string(executor_memory)
+                executor_memory_overhead = f"{self._calculate_memory_overhead(executor_memory_mb)}m"
 
             # Try to parse shuffle_partitions as int
             try:
@@ -148,143 +432,22 @@ class ExecutorV2:
             except (ValueError, TypeError):
                 pass
 
-            # Get executor information from SparkContext
-            executors = []
-            total_executor_cores = 0
-            total_executor_memory = 0
-
-            if self._is_local_mode(master):
-                # Local mode - driver acts as executor (single JVM)
-                import multiprocessing
-                if "[*]" in master:
-                    num_cores = multiprocessing.cpu_count()
-                elif "[" in master:
-                    try:
-                        num_cores = int(master.split("[")[1].split("]")[0])
-                    except:
-                        num_cores = 1
-                else:
-                    num_cores = 1
-
-                executors = [{
-                    "id": "driver",
-                    "host": "localhost",
-                    "cores": num_cores,
-                    "memory_mb": self._parse_memory_string(driver_memory),
-                }]
-                total_executor_cores = num_cores
-                total_executor_memory = self._parse_memory_string(driver_memory)
-            else:
-                # Cluster mode - query actual executor info using statusTracker
-                try:
-                    # Get executor IDs from statusTracker (excluding driver)
-                    executor_infos = sc._jsc.sc().statusTracker().getExecutorInfos()
-                    executor_ids = [e.executorId() for e in executor_infos]
-                    executor_ids_without_driver = [eid for eid in executor_ids if eid != "driver"]
-
-                    # Get memory status per executor (includes driver)
-                    executor_memory_status = sc._jsc.sc().getExecutorMemoryStatus()
-
-                    # Get cores per executor from config
-                    cores_per_executor = conf.get("spark.executor.cores", None)
-                    if cores_per_executor:
-                        try:
-                            cores_per_executor = int(cores_per_executor)
-                        except:
-                            cores_per_executor = None
-
-                    # If not in config, estimate from defaultParallelism
-                    if not cores_per_executor:
-                        default_parallelism = sc.defaultParallelism
-                        num_executors = len(executor_ids_without_driver)
-                        cores_per_executor = max(1, default_parallelism // max(1, num_executors)) if num_executors > 0 else 1
-
-                    # Build executor info list
-                    for executor_info in executor_infos:
-                        executor_id = executor_info.executorId()
-                        is_driver = executor_id == "driver"
-
-                        # Get host and port from executor info
-                        host = executor_info.host()
-                        port = executor_info.port()
-
-                        # Get memory info if available
-                        memory_mb = 0
-                        memory_used_mb = 0
-                        if executor_memory_status.containsKey(f"{host}:{port}"):
-                            mem_tuple = executor_memory_status.get(f"{host}:{port}")
-                            max_mem_bytes = mem_tuple._1() if hasattr(mem_tuple, '_1') else 0
-                            remaining_mem_bytes = mem_tuple._2() if hasattr(mem_tuple, '_2') else 0
-                            memory_mb = int(max_mem_bytes / (1024 * 1024))
-                            memory_used_mb = int((max_mem_bytes - remaining_mem_bytes) / (1024 * 1024))
-                        elif executor_memory_status.containsKey(executor_id):
-                            mem_tuple = executor_memory_status.get(executor_id)
-                            max_mem_bytes = mem_tuple._1() if hasattr(mem_tuple, '_1') else 0
-                            remaining_mem_bytes = mem_tuple._2() if hasattr(mem_tuple, '_2') else 0
-                            memory_mb = int(max_mem_bytes / (1024 * 1024))
-                            memory_used_mb = int((max_mem_bytes - remaining_mem_bytes) / (1024 * 1024))
-
-                        executor_data = {
-                            "id": executor_id,
-                            "host": host,
-                            "port": port,
-                            "cores": cores_per_executor if not is_driver else 0,
-                            "memory_mb": memory_mb,
-                            "memory_used_mb": memory_used_mb,
-                        }
-                        executors.append(executor_data)
-
-                        if not is_driver:
-                            total_executor_cores += cores_per_executor
-                            total_executor_memory += memory_mb
-
-                except Exception as e:
-                    # Fallback: use configuration values
-                    print(f"Warning: Failed to get executor info from statusTracker: {e}")
-                    executor_cores = conf.get("spark.executor.cores", "1")
-                    num_executors = conf.get("spark.executor.instances", "1")
-
-                    try:
-                        executor_cores = int(executor_cores)
-                        num_executors = int(num_executors)
-                    except:
-                        executor_cores = 1
-                        num_executors = 1
-
-                    for i in range(num_executors):
-                        executors.append({
-                            "id": f"executor_{i}",
-                            "cores": executor_cores,
-                            "memory_mb": self._parse_memory_string(executor_memory),
-                            "memory_used_mb": 0,
-                        })
-
-                    total_executor_cores = executor_cores * num_executors
-                    total_executor_memory = self._parse_memory_string(executor_memory) * num_executors
-
             return {
-                "mode": master,
+                "mode": spark_mode,
                 "driver_memory": driver_memory,
                 "executor_memory": executor_memory,
+                "executor_cores": executor_cores,
                 "shuffle_partitions": shuffle_partitions,
                 "default_parallelism": sc.defaultParallelism,
-                "executors": executors,
-                "cluster_summary": {
-                    "total_executors": len([e for e in executors if e["id"] != "driver"]),
-                    "total_cores": total_executor_cores,
-                    "total_memory_mb": total_executor_memory,
-                }
+                "driver_memory_overhead": driver_memory_overhead,
+                "executor_memory_overhead": executor_memory_overhead,
+                "cluster_capacity": cluster_capacity_info,
             }
         except Exception as e:
             # Return error info without hardcoded fallbacks
             return {
                 "mode": "unknown",
                 "error": f"Failed to extract cluster config: {str(e)}",
-                "cluster_summary": {
-                    "total_executors": 0,
-                    "total_cores": 0,
-                    "total_memory_mb": 0,
-                }
             }
 
     def _is_local_mode(self, master: str) -> bool:
@@ -321,11 +484,8 @@ class ExecutorV2:
 
     def _stop_spark_session(self, spark: SparkSession):
         """Stop the SparkSession and clean up resources"""
-        import time
         try:
             spark.stop()
-            # Small delay to ensure event logs are flushed to disk
-            time.sleep(0.5)
         except Exception as e:
             print(f"Warning: Error stopping SparkSession: {e}", file=sys.stderr)
 
@@ -404,11 +564,15 @@ class ExecutorV2:
             error = (
                 "No solve() function found!\n\n"
                 "Your code must define a function named 'solve' that:\n"
-                "1. Takes DataFrame parameters matching the puzzle inputs\n"
-                "2. Returns a DataFrame as the result\n\n"
+                "1. Takes 'spark' as the first parameter (SparkSession)\n"
+                "2. Takes raw data parameters (list[dict]) matching the puzzle inputs\n"
+                "3. Creates DataFrames using spark.createDataFrame(data)\n"
+                "4. Returns a DataFrame as the result\n\n"
                 "Example:\n"
-                "def solve(fruits):\n"
-                "    result = fruits.filter(...)\n"
+                "from pyspark.sql import SparkSession, DataFrame\n\n"
+                "def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:\n"
+                "    df = spark.createDataFrame(fruits)\n"
+                "    result = df.filter(...)\n"
                 "    return result"
             )
             return None, error
@@ -428,24 +592,36 @@ class ExecutorV2:
             error = f"Could not inspect solve() signature: {str(e)}"
             return None, error
 
-        # Validate parameter count
-        expected_params = sorted(input_data_keys)
-        actual_params = sorted(param_names)
+        # Expected: 'spark' + all input_data_keys
+        expected_params = ['spark'] + sorted(input_data_keys)
+        # Actual: first param should be 'spark', rest should be data keys (sorted)
+        if len(param_names) == 0 or param_names[0] != 'spark':
+            error = (
+                f"First parameter must be 'spark'!\n\n"
+                f"Expected signature: def solve(spark: SparkSession, {', '.join(sorted(input_data_keys))})\n"
+                f"Got parameters: {param_names}\n\n"
+                f"The 'spark' parameter gives you the SparkSession to create DataFrames."
+            )
+            return None, error
 
-        if len(param_names) != len(input_data_keys):
+        # Check remaining parameters (after 'spark')
+        actual_data_params = sorted(param_names[1:])
+        expected_data_params = sorted(input_data_keys)
+
+        if len(actual_data_params) != len(expected_data_params):
             error = (
                 f"Parameter count mismatch!\n"
-                f"Expected {len(input_data_keys)} parameters: {expected_params}\n"
-                f"Got {len(param_names)} parameters: {actual_params}"
+                f"Expected: spark + {expected_data_params}\n"
+                f"Got: {param_names}"
             )
             return None, error
 
         # Validate parameter names match
-        if actual_params != expected_params:
+        if actual_data_params != expected_data_params:
             error = (
                 f"Parameter names don't match!\n"
-                f"Expected: {expected_params}\n"
-                f"Got: {actual_params}\n\n"
+                f"Expected: ['spark'] + {expected_data_params}\n"
+                f"Got: {param_names}\n\n"
                 f"Make sure your function parameters match the input data names."
             )
             return None, error
@@ -455,28 +631,32 @@ class ExecutorV2:
     def _call_user_function(
         self,
         user_func: callable,
-        spark_dfs: Dict[str, SparkDataFrame]
+        spark: SparkSession,
+        input_data: Dict[str, Any]
     ) -> SparkDataFrame:
         """
-        Call user's solve() function with DataFrame arguments.
+        Call user's solve() function with spark session and raw data.
 
         Args:
             user_func: The solve() function
-            spark_dfs: Dictionary mapping parameter names to DataFrames
+            spark: SparkSession for creating DataFrames
+            input_data: Dictionary mapping parameter names to raw data (list[dict])
 
         Returns:
             Result DataFrame from user function
         """
-        # Build kwargs mapping parameter names to DataFrames
+        # Build kwargs: spark + raw data for each input key
         sig = inspect.signature(user_func)
-        kwargs = {}
+        kwargs = {'spark': spark}
 
         for param_name in sig.parameters.keys():
-            if param_name not in spark_dfs:
+            if param_name == 'spark':
+                continue  # Already added
+            if param_name not in input_data:
                 raise ValueError(f"Missing input data for parameter: {param_name}")
-            kwargs[param_name] = spark_dfs[param_name]
+            kwargs[param_name] = input_data[param_name]
 
-        # Call function with DataFrames
+        # Call function with spark and raw data
         result = user_func(**kwargs)
         return result
 
@@ -612,7 +792,8 @@ class ExecutorV2:
         self,
         code: str,
         input_data: Dict[str, Any],
-        execution_id: str
+        execution_id: str,
+        spark_config:Optional[SparkConfig]=None
     ) -> Tuple[Any, str, str, Optional[Dict[str, Any]], str]:
         """
         Execute user's solve() function with tracking.
@@ -637,7 +818,7 @@ class ExecutorV2:
 
         try:
             # 1. Create SparkSession
-            spark = self._create_spark_session()
+            spark = self._create_spark_session(spark_config=spark_config)
             sc = spark.sparkContext
             print("spark.driver.host =", sc.getConf().get("spark.driver.host"))
             print("spark.driver.bindAddress =", sc.getConf().get("spark.driver.bindAddress"))
@@ -646,30 +827,14 @@ class ExecutorV2:
             app_id = spark.sparkContext.applicationId
             print("Spark UI:", spark.sparkContext.uiWebUrl)
 
-            # 2. Convert input data to Spark DataFrames
-            spark_dfs = {}
-            for key, value in input_data.items():
-                if isinstance(value, list):
-                    # Convert list of dicts to Spark DataFrame
-                    if value:  # Only if not empty
-                        spark_dfs[key] = spark.createDataFrame(value)
-                    else:
-                        # Empty DataFrame with schema if possible
-                        spark_dfs[key] = spark.createDataFrame([], schema="")
-                else:
-                    # Pass through other types (shouldn't happen in normal puzzles)
-                    spark_dfs[key] = value
+            # 2. Raw data will be passed directly to solve() function
+            # Users create their own DataFrames with spark.createDataFrame(data)
+            # This allows control over initial partitioning via .repartition()
 
             # 3. Setup execution environment
+            # Only provide builtins - users must explicitly import what they need
+            # This is more educational and teaches real PySpark patterns
             exec_globals = {
-                'spark': spark,
-                'col': col,
-                'broadcast': broadcast,
-                'sum': sum,
-                'count': count,
-                'avg': avg,
-                'when': when,
-                'lit': lit,
                 '__builtins__': __builtins__,
             }
 
@@ -691,8 +856,8 @@ class ExecutorV2:
                 if validation_error:
                     raise ValueError(validation_error)
 
-                # 7. Call solve() function with DataFrames
-                result_df = self._call_user_function(user_func, spark_dfs)
+                # 7. Call solve() function with spark session and raw data
+                result_df = self._call_user_function(user_func, spark, input_data)
 
                 # 8. Validate result is a DataFrame
                 if not isinstance(result_df, SparkDataFrame):
@@ -712,16 +877,41 @@ class ExecutorV2:
             # 11. Add app_id to metadata
             if metadata:
                 metadata['app_id'] = app_id
-                metadata['cluster_config'] = self._get_cluster_config(spark)
 
             # 12. Collect with job group (THE critical step)
             result, job_group_id = self._collect_with_job_group(
                 result_df, spark, execution_id
             )
 
+            # 12.5. Get cluster config AFTER collect (executors fully registered)
+            if metadata:
+                metadata['cluster_config'] = self._get_cluster_config(spark)
+
+            # 12.6. Get executor info for metadata
+            if metadata:
+                metadata['executors_info'] = self._get_executors_info(spark)
+
             # 13. Add job_group_id to metadata
             if metadata:
                 metadata['job_group_id'] = job_group_id
+
+            # 13.5 Fetch execution tree from active Spark UI BEFORE stopping
+            # the session.  The active UI (port 4040) has all data instantly;
+            # the History Server needs event-log flush and has a race condition.
+            if metadata and job_group_id and app_id:
+                active_ui_url = spark.sparkContext.uiWebUrl
+                if active_ui_url:
+                    try:
+                        from app.services.spark_event_tracker import SparkEventTracker
+                        tracker = SparkEventTracker(active_ui_url=active_ui_url)
+                        execution_tree = tracker.build_execution_tree(
+                            app_id, job_group_id, use_active_ui=True
+                        )
+                        if execution_tree:
+                            metadata['execution_tree'] = execution_tree
+                            print(f"Pre-fetched execution tree from active UI ({active_ui_url})")
+                    except Exception as e:
+                        print(f"Warning: Failed to pre-fetch execution tree: {e}")
 
         except TimeoutException as e:
             error_msg = str(e)

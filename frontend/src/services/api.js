@@ -105,12 +105,26 @@ export const puzzleService = {
   },
 
   /**
-   * Run user code for a puzzle
+   * Run user code for a puzzle (V2 - function-based submission)
+   *
+   * Users submit code with `def solve(...) -> DataFrame` format.
+   * Example:
+   *   def solve(fruits):
+   *     return fruits.orderBy('type')
    */
-  async runPuzzle(puzzleId, code) {
-    const response = await api.post(`/puzzles/${puzzleId}/run`, { code });
-    return response.data;
-  },
+  async runPuzzle(puzzleId, code, sparkConfig = null) {
+    const body = {
+      code,
+      ...(sparkConfig && { spark_config: sparkConfig }),
+    };
+  
+    const { data } = await api.post(
+      `/puzzles/${puzzleId}/run`,
+      body
+    );
+  
+    return data;
+  }  
 };
 
 export default api;

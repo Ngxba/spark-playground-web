@@ -1,4 +1,4 @@
-from .puzzle import Puzzle, PuzzleMetadata, RunRequest, RunResult, MetricsResult
+from .puzzle import Puzzle, PuzzleMetadata, SparkConfig, RunRequest, RunResult, MetricsResult
 from .enums import Difficulty, ConceptTag
 from .execution import (
     ExecutionSimulation,
@@ -15,6 +15,7 @@ from .db_models import PuzzleRun, RunMetrics, ExecutionData, ExecutionPlan, RunO
 __all__ = [
     "Puzzle",
     "PuzzleMetadata",
+    "SparkConfig",
     "RunRequest",
     "RunResult",
     "MetricsResult",

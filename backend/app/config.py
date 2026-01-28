@@ -14,7 +14,9 @@ class Settings(BaseSettings):
 
     # Spark Cluster
     spark_master_url: str = "spark://localhost:7077"
+    spark_master_ui_url: str = "http://localhost:8080"
     spark_shuffle_partitions: int = 4
+    spark_executor_cores: int = 2
     spark_driver_memory: str = "2g"
     spark_executor_memory: str = "2g"
 

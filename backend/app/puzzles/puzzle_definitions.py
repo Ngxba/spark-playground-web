@@ -1,4 +1,5 @@
 from app.models import Puzzle, Difficulty, ConceptTag
+from app.puzzles.data_loader import get_group_fruits_data, get_group_fruits_expected
 
 # Puzzle 1: Group the Fruits
 PUZZLE_GROUP_FRUITS = Puzzle(
@@ -12,41 +13,34 @@ The fruits are randomly distributed across the belts. Your task is to group the 
 respective bins.""",
     goal="Group all fruits by their type so that each type is collected together.",
     initial_data={
-        "fruits": [
-            {"id": 1, "type": "apple", "color": "red"},
-            {"id": 2, "type": "banana", "color": "yellow"},
-            {"id": 3, "type": "apple", "color": "red"},
-            {"id": 4, "type": "cherry", "color": "purple"},
-            {"id": 5, "type": "banana", "color": "yellow"},
-            {"id": 6, "type": "cherry", "color": "purple"},
-            {"id": 7, "type": "apple", "color": "red"},
-            {"id": 8, "type": "banana", "color": "yellow"},
-            {"id": 9, "type": "cherry", "color": "purple"},
-        ]
+        "fruits": get_group_fruits_data(),
     },
-    expected_output=[
-        {"id": 1, "type": "apple", "color": "red"},
-        {"id": 3, "type": "apple", "color": "red"},
-        {"id": 7, "type": "apple", "color": "red"},
-        {"id": 2, "type": "banana", "color": "yellow"},
-        {"id": 5, "type": "banana", "color": "yellow"},
-        {"id": 8, "type": "banana", "color": "yellow"},
-        {"id": 4, "type": "cherry", "color": "purple"},
-        {"id": 6, "type": "cherry", "color": "purple"},
-        {"id": 9, "type": "cherry", "color": "purple"},
-    ],
+    expected_output=get_group_fruits_expected(),
     starter_code="""# Define a function that groups fruits by type
-# Your function receives a 'fruits' DataFrame as input
+# Your function receives:
+#   - spark: SparkSession - use to create DataFrames
+#   - fruits: list[dict] - raw data as list of dictionaries
+# Create your DataFrame and control partitioning as needed
 # Return the transformed DataFrame (do NOT call .show() or .collect())
 
-def solve(fruits):
-    # Your code here
-    # Return the fruits ordered by type
-    result = fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    # Create DataFrame from raw data
+    df = spark.createDataFrame(fruits)
+    # Optional: Control initial partitions with repartition
+    # df = spark.createDataFrame(fruits).repartition(4)
+
+    # Your code here - group fruits by type
+    result = df.orderBy('type')
     return result
 """,
-    optimal_solution="""result = fruits.orderBy('type')
-result.show()""",
+    optimal_solution="""from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    result = df.orderBy('type')
+    return result""",
     visualization_config={
         "input_conveyors": 3,
         "transformation": "sort",
@@ -93,23 +87,34 @@ with a few City Info boxes (city code and city name). You need to enrich each or
     ],
     starter_code="""# Define a function that joins orders with city information
 # Hint: cities is a small dataset - use broadcast() to avoid shuffle!
-# Your function receives 'orders' and 'cities' DataFrames as input
+# Your function receives:
+#   - spark: SparkSession - use to create DataFrames
+#   - orders: list[dict] - orders data (large dataset)
+#   - cities: list[dict] - city info data (small dataset)
 # Return the joined DataFrame (do NOT call .show() or .collect())
 
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import broadcast
 
-def solve(orders, cities):
-    # Your code here
+def solve(spark: SparkSession, orders: list[dict], cities: list[dict]) -> DataFrame:
+    # Create DataFrames from raw data
+    orders_df = spark.createDataFrame(orders)
+    cities_df = spark.createDataFrame(cities)
+
     # Inefficient: regular join (causes shuffle)
-    result = orders.join(cities, 'city_code')
+    result = orders_df.join(cities_df, 'city_code')
     # TODO: Try using broadcast() for better performance!
     return result
 """,
     optimal_solution="""# Optimal: Use broadcast join to avoid shuffle
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import broadcast
-result = orders.join(broadcast(cities), 'city_code')
-result.show()
-""",
+
+def solve(spark: SparkSession, orders: list[dict], cities: list[dict]) -> DataFrame:
+    orders_df = spark.createDataFrame(orders)
+    cities_df = spark.createDataFrame(cities)
+    result = orders_df.join(broadcast(cities_df), 'city_code')
+    return result""",
     visualization_config={
         "input_conveyors": 2,
         "transformation": "join",
@@ -146,20 +151,29 @@ the total quantity of products by type.""",
         {"type": "C", "quantity": 20},
     ],
     starter_code="""# Define a function that calculates total quantity per product type
-# Your function receives a 'products' DataFrame as input
+# Your function receives:
+#   - spark: SparkSession - use to create DataFrames
+#   - products: list[dict] - products data
 # Return the aggregated DataFrame (do NOT call .show() or .collect())
 
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import sum
 
-def solve(products):
-    # Your code here
+def solve(spark: SparkSession, products: list[dict]) -> DataFrame:
+    # Create DataFrame from raw data
+    df = spark.createDataFrame(products)
+
     # Group by type and sum quantities
-    result = products.groupBy('type').agg(sum('quantity').alias('quantity'))
+    result = df.groupBy('type').agg(sum('quantity').alias('quantity'))
     return result
 """,
-    optimal_solution="""from pyspark.sql.functions import sum
-result = products.groupBy('type').agg(sum('quantity').alias('quantity'))
-result.show()""",
+    optimal_solution="""from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import sum
+
+def solve(spark: SparkSession, products: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(products)
+    result = df.groupBy('type').agg(sum('quantity').alias('quantity'))
+    return result""",
     visualization_config={
         "input_conveyors": 1,
         "transformation": "aggregate",
@@ -200,25 +214,36 @@ with additional information. Defective items should NOT be processed at all.""",
     ],
     starter_code="""# Define a function that joins items with info for non-defective items
 # Think about WHEN to filter for best performance!
-# Your function receives 'items' and 'info' DataFrames as input
+# Your function receives:
+#   - spark: SparkSession - use to create DataFrames
+#   - items: list[dict] - items data (some defective)
+#   - info: list[dict] - additional info data
 # Return the filtered and joined DataFrame (do NOT call .show() or .collect())
 
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col
 
-def solve(items, info):
-    # Your code here
+def solve(spark: SparkSession, items: list[dict], info: list[dict]) -> DataFrame:
+    # Create DataFrames from raw data
+    items_df = spark.createDataFrame(items)
+    info_df = spark.createDataFrame(info)
+
     # Inefficient: filter after join
-    result = items.join(info, 'info_key')
+    result = items_df.join(info_df, 'info_key')
     result = result.filter(col('defective') == False)
     # TODO: Try filtering BEFORE joining for better performance!
     return result
 """,
     optimal_solution="""# Optimal: filter before join (pushdown optimization)
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col
-clean_items = items.filter(col('defective') == False)
-result = clean_items.join(info, 'info_key')
-result.show()
-""",
+
+def solve(spark: SparkSession, items: list[dict], info: list[dict]) -> DataFrame:
+    items_df = spark.createDataFrame(items)
+    info_df = spark.createDataFrame(info)
+    clean_items = items_df.filter(col('defective') == False)
+    result = clean_items.join(info_df, 'info_key')
+    return result""",
     visualization_config={
         "input_conveyors": 2,
         "transformation": "filter_then_join",

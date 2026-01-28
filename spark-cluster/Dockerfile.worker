@@ -1,8 +1,7 @@
-FROM apache/spark:3.5.0
+ARG BASE_IMAGE=spark-base:3.5.0
+FROM ${BASE_IMAGE}
 
 # Install Python 3.12
-# Check if base image is Ubuntu (has lsb_release) or Debian
-USER root
 RUN apt-get update && \
     apt-get install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev \
     libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev && \
@@ -16,11 +15,6 @@ RUN apt-get update && \
     ln -sf /usr/local/bin/python3.12 /usr/local/bin/python3 && \
     cd / && \
     rm -rf /tmp/Python-3.12.7* && \
-    # Download and add S3 support libraries for MinIO before removing wget
-    cd ${SPARK_HOME}/jars && \
-    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && \
-    wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar && \
-    cd / && \
     apt-get purge -y build-essential wget && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
@@ -32,5 +26,3 @@ ENV PATH="/usr/local/bin:${PATH}"
 
 # Copy Spark configuration
 COPY spark-defaults.conf ${SPARK_HOME}/conf/
-
-USER spark

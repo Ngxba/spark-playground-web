@@ -192,7 +192,8 @@ class SparkEventTracker:
         self,
         app_id: str,
         job_group_id: str,
-        retry_with_active_ui: bool = True
+        retry_with_active_ui: bool = True,
+        use_active_ui: bool = False
     ) -> Optional[Dict[str, Any]]:
         """
         Build complete execution tree: Jobs → Stages → Tasks.
@@ -204,24 +205,33 @@ class SparkEventTracker:
             app_id: Spark application ID
             job_group_id: Job group ID to filter jobs
             retry_with_active_ui: If History Server fails, try active Spark UI
+            use_active_ui: If True, go directly to active Spark UI (skip History Server)
 
         Returns:
             Execution tree dictionary with jobs, stages, and tasks, or None if unavailable
         """
-        # Try History Server first
-        jobs = self.get_jobs_by_group(app_id, job_group_id, use_active_ui=False)
+        # Track which source we found jobs from
+        found_from_active_ui = use_active_ui
 
-        # If History Server doesn't have the data yet, try active Spark UI
-        if not jobs and retry_with_active_ui:
-            print(f"No jobs found in History Server, trying active Spark UI...")
+        if use_active_ui:
+            # Go directly to the active Spark UI — no race condition
             jobs = self.get_jobs_by_group(app_id, job_group_id, use_active_ui=True)
+        else:
+            # Try History Server first
+            jobs = self.get_jobs_by_group(app_id, job_group_id, use_active_ui=False)
+
+            # If History Server doesn't have the data yet, try active Spark UI
+            if not jobs and retry_with_active_ui:
+                print(f"No jobs found in History Server, trying active Spark UI...")
+                jobs = self.get_jobs_by_group(app_id, job_group_id, use_active_ui=True)
+                found_from_active_ui = True
 
         if not jobs:
             print(f"Warning: No jobs found for app {app_id} with job group '{job_group_id}'")
             return None
 
-        # Determine which UI to use based on where we found jobs
-        use_active = (retry_with_active_ui and len(jobs) > 0)
+        # Use the same source for stages that we used for jobs
+        use_active = found_from_active_ui
 
         execution_tree = {
             'app_id': app_id,
@@ -335,8 +345,8 @@ class SparkEventTracker:
         self,
         app_id: str,
         job_group_id: str,
-        max_wait_seconds: float = 1.0,
-        retry_interval: float = 0.2
+        max_wait_seconds: float = 5.0,
+        retry_interval: float = 0.5
     ) -> Optional[Dict[str, Any]]:
         """
         Wait for Spark events to be flushed and available.

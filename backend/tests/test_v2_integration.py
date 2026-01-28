@@ -166,8 +166,11 @@ class TestExecutorV2Integration:
     def test_execute_missing_solve_function(self, executor, group_fruits_puzzle):
         """Test error handling when solve() is missing"""
         bad_code = """
-def process(fruits):
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def process(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df
 """
         result, output_log, error, metadata, job_group_id = executor.execute(
             bad_code,
@@ -185,8 +188,11 @@ def process(fruits):
     def test_execute_wrong_parameters(self, executor, group_fruits_puzzle):
         """Test error handling when solve() has wrong parameters"""
         bad_code = """
-def solve(apples, oranges):
-    return apples
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, apples: list[dict], oranges: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(apples)
+    return df
 """
         result, output_log, error, metadata, job_group_id = executor.execute(
             bad_code,
@@ -203,9 +209,12 @@ def solve(apples, oranges):
     def test_execute_action_prevention(self, executor, group_fruits_puzzle):
         """Test that calling .collect() inside solve() is blocked"""
         bad_code = """
-def solve(fruits):
-    data = fruits.collect()
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    data = df.collect()  # This should be blocked
+    return df
 """
         result, output_log, error, metadata, job_group_id = executor.execute(
             bad_code,
@@ -222,8 +231,10 @@ def solve(fruits):
     def test_execute_returns_non_dataframe(self, executor, group_fruits_puzzle):
         """Test error handling when solve() returns non-DataFrame"""
         bad_code = """
-def solve(fruits):
-    return [{"id": 1}]
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    return [{"id": 1}]  # Returns list instead of DataFrame
 """
         result, output_log, error, metadata, job_group_id = executor.execute(
             bad_code,
@@ -240,8 +251,11 @@ def solve(fruits):
     def test_execute_syntax_error(self, executor, group_fruits_puzzle):
         """Test handling of syntax errors in user code"""
         bad_code = """
-def solve(fruits):
-    return fruits.filter(
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.filter(
 """
         result, output_log, error, metadata, job_group_id = executor.execute(
             bad_code,
@@ -269,7 +283,7 @@ def solve(fruits):
         assert 'mode' in cluster_config
         assert 'total_cores' in cluster_config
         assert 'shuffle_partitions' in cluster_config
-        assert 'cluster_summary' in cluster_config
+        assert 'cluster_capacity' in cluster_config
 
         print(f"\n[SUCCESS] Cluster config extracted")
         print(f"  Mode: {cluster_config.get('mode')}")
@@ -522,8 +536,11 @@ class TestJudgeV2Integration:
     def test_evaluate_with_error(self, judge, group_fruits_puzzle):
         """Test evaluating code with errors"""
         bad_code = """
-def solve(wrong_param):
-    return wrong_param
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, wrong_param: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(wrong_param)
+    return df
 """
         result = judge.evaluate(
             group_fruits_puzzle['puzzle_id'],
@@ -848,8 +865,11 @@ class TestEndToEndScenarios:
 
         print("\nStep 1: User submits code with syntax error...")
         syntax_error_code = """
-def solve(fruits):
-    return fruits.filter(
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.filter(
 """
         syntax_result = judge.evaluate(
             group_fruits_puzzle['puzzle_id'],
@@ -863,7 +883,10 @@ def solve(fruits):
 
         print("\nStep 2: User forgets solve() function...")
         no_solve_code = """
-result = fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+# No solve function defined
+result = 1 + 1
 """
         no_solve_result = judge.evaluate(
             group_fruits_puzzle['puzzle_id'],
@@ -927,9 +950,12 @@ class TestPerformance:
         }
 
         code = """
-def solve(items):
-    from pyspark.sql.functions import sum as spark_sum
-    return items.groupBy("category").agg(spark_sum("value").alias("total")).orderBy("category")
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import sum as spark_sum
+
+def solve(spark: SparkSession, items: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(items)
+    return df.groupBy("category").agg(spark_sum("value").alias("total")).orderBy("category")
 """
 
         print("\n[INFO] Testing with 1000-row dataset...")

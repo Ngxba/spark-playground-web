@@ -234,6 +234,7 @@ function ReportPage() {
           {activeTab === 'cluster' && (
             <ClusterOverview
               clusterConfig={result.cluster_config}
+              executorsInfo={result.executors_info}
             />
           )}
 

@@ -51,6 +51,7 @@ class ExecutionData(Base):
     stage_flow_json = Column(JSONB)
     cluster_config_json = Column(JSONB)
     dag_structure_json = Column(JSONB)
+    executors_info_json = Column(JSONB)
 
     run = relationship("PuzzleRun", back_populates="execution_data")
 

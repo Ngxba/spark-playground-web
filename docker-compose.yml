@@ -4,7 +4,7 @@ include:
 services:
   postgres:
     image: postgres:15
-    container_name: spark_playground_db
+    container_name: spark-playground-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password

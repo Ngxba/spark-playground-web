@@ -1,33 +1,8 @@
-FROM eclipse-temurin:11-jre-jammy
-
-# Install required packages
-RUN apt-get update && \
-    apt-get install -y wget curl procps && \
-    rm -rf /var/lib/apt/lists/*
-
-# Download and install Spark
-ENV SPARK_VERSION=3.5.0
-ENV HADOOP_AWS_VERSION=3.3.4
-ENV SPARK_HADOOP_VERSION=3
-ENV AWS_SDK_VERSION=1.12.540
-ENV SPARK_HOME=/opt/spark
-
-RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${SPARK_HADOOP_VERSION}.tgz && \
-    tar -xzf spark-${SPARK_VERSION}-bin-hadoop${SPARK_HADOOP_VERSION}.tgz && \
-    mv spark-${SPARK_VERSION}-bin-hadoop${SPARK_HADOOP_VERSION} ${SPARK_HOME} && \
-    rm spark-${SPARK_VERSION}-bin-hadoop${SPARK_HADOOP_VERSION}.tgz
-
-RUN cd ${SPARK_HOME}/jars && \
-    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/${HADOOP_AWS_VERSION}/hadoop-aws-${HADOOP_AWS_VERSION}.jar && \
-    wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_SDK_VERSION}/aws-java-sdk-bundle-${AWS_SDK_VERSION}.jar
+ARG BASE_IMAGE=spark-base:3.5.0
+FROM ${BASE_IMAGE}
 
 # Copy spark configuration
 COPY spark-defaults.conf ${SPARK_HOME}/conf/
-
-# Set environment variables
-ENV PATH=$PATH:${SPARK_HOME}/bin:${SPARK_HOME}/sbin
-
-WORKDIR ${SPARK_HOME}
 
 # Expose Spark History Server port
 EXPOSE 18080

@@ -27,8 +27,11 @@ class TestExecutorV2:
         """Test execution of valid function-based code"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    return fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('type')
 """
         execution_id = "test_001"
 
@@ -65,14 +68,17 @@ x = 1 + 1
         assert result is None
 
     def test_dataframe_access_outside_function(self, sample_input_data):
-        """Test that users cannot access DataFrames outside solve() function"""
+        """Test that users cannot access raw data outside solve() function"""
         executor = ExecutorV2()
         code = """
-# Trying to use DataFrame at module level (not inside solve)
-result = fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
 
-def solve(fruits):
-    return result
+# Trying to use raw data at module level (not inside solve)
+result = fruits  # This should fail - fruits not defined at module level
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df
 """
         execution_id = "test_003"
 
@@ -90,8 +96,11 @@ def solve(fruits):
         """Test error handling for wrong parameter names"""
         executor = ExecutorV2()
         code = """
-def solve(wrong_param):
-    return wrong_param.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, wrong_param: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(wrong_param)
+    return df.orderBy('type')
 """
         execution_id = "test_004"
 
@@ -107,8 +116,11 @@ def solve(wrong_param):
         """Test error handling for wrong number of parameters"""
         executor = ExecutorV2()
         code = """
-def solve(fruits, extra_param):
-    return fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict], extra_param: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('type')
 """
         execution_id = "test_005"
 
@@ -124,7 +136,9 @@ def solve(fruits, extra_param):
         """Test error handling when function doesn't return DataFrame"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
     return [1, 2, 3]  # Returns list, not DataFrame
 """
         execution_id = "test_006"
@@ -141,9 +155,12 @@ def solve(fruits):
         """Test that calling .collect() inside solve() is prevented"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    fruits.collect()  # This should be blocked
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    df.collect()  # This should be blocked
+    return df
 """
         execution_id = "test_007"
 
@@ -159,9 +176,12 @@ def solve(fruits):
         """Test that calling .show() inside solve() is prevented"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    fruits.show()  # This should be blocked
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    df.show()  # This should be blocked
+    return df
 """
         execution_id = "test_008"
 
@@ -177,9 +197,12 @@ def solve(fruits):
         """Test that calling .count() inside solve() is prevented"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    n = fruits.count()  # This should be blocked
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    n = df.count()  # This should be blocked
+    return df
 """
         execution_id = "test_009"
 
@@ -195,11 +218,13 @@ def solve(fruits):
         """Test execution with complex transformations"""
         executor = ExecutorV2()
         code = """
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col
 
-def solve(fruits):
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
     # Complex transformation with filter and orderBy
-    result = fruits.filter(col('type') == 'apple').orderBy('id')
+    result = df.filter(col('type') == 'apple').orderBy('id')
     return result
 """
         execution_id = "test_010"
@@ -218,8 +243,11 @@ def solve(fruits):
         """Test that metadata is properly extracted"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    return fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('type')
 """
         execution_id = "test_011"
 
@@ -241,8 +269,11 @@ def solve(fruits):
         """Test handling of syntax errors in user code"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    return fruits.orderBy('type'  # Missing closing parenthesis
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('type'  # Missing closing parenthesis
 """
         execution_id = "test_012"
 
@@ -258,8 +289,11 @@ def solve(fruits):
         """Test handling of runtime errors in user code"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    result = fruits.orderBy('nonexistent_column')  # Column doesn't exist
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    result = df.orderBy('nonexistent_column')  # Column doesn't exist
     return result
 """
         execution_id = "test_013"
@@ -288,8 +322,12 @@ def solve(fruits):
             ]
         }
         code = """
-def solve(orders, cities):
-    return orders.join(cities, 'city_code')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, orders: list[dict], cities: list[dict]) -> DataFrame:
+    orders_df = spark.createDataFrame(orders)
+    cities_df = spark.createDataFrame(cities)
+    return orders_df.join(cities_df, 'city_code')
 """
         execution_id = "test_014"
 
@@ -307,8 +345,11 @@ def solve(orders, cities):
         """Test that job group ID has correct format"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    return fruits
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df
 """
         execution_id = "test_custom_id_123"
 
@@ -325,8 +366,11 @@ def solve(fruits):
         """Test that results are properly converted from Row to dict"""
         executor = ExecutorV2()
         code = """
-def solve(fruits):
-    return fruits.orderBy('id')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('id')
 """
         execution_id = "test_015"
 
@@ -348,8 +392,13 @@ def solve(fruits):
         executor = ExecutorV2()
         input_data = {"empty_data": []}
         code = """
-def solve(empty_data):
-    return empty_data
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, empty_data: list[dict]) -> DataFrame:
+    # For empty data, need to provide schema
+    from pyspark.sql.types import StructType
+    df = spark.createDataFrame(empty_data, StructType([]))
+    return df
 """
         execution_id = "test_016"
 

@@ -41,7 +41,8 @@ class RunRepository:
             execution_simulation_json=result.execution_simulation.dict() if result.execution_simulation else None,
             stage_flow_json=result.stage_flow,
             cluster_config_json=result.cluster_config,
-            dag_structure_json=result.dag_structure
+            dag_structure_json=result.dag_structure,
+            executors_info_json=[executor.dict() for executor in result.executors_info] if result.executors_info else None
         )
         db.add(execution_data)
 
@@ -58,7 +59,7 @@ class RunRepository:
         output_data = RunOutput(
             run_id=run.id,
             output_data_json=result.output,
-            expected_output_json=result.expected_output if hasattr(result, 'expected_output') else None
+            expected_output_json=result.expected_output
         )
         db.add(output_data)
 

@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.models import RunResult, MetricsResult
 from app.services.executor_v2 import ExecutorV2
 from app.services.spark_event_tracker import SparkEventTracker
@@ -7,6 +7,8 @@ from app.services.execution_simulator_v2 import ExecutionSimulatorV2
 from app.services.operation_detector import OperationDetector
 from app.services.hint_generator import HintGenerator
 import pandas as pd
+from app.models.puzzle import SparkConfig
+from app.config import settings
 
 
 class JudgeV2:
@@ -33,7 +35,8 @@ class JudgeV2:
         puzzle_id: str,
         code: str,
         input_data: Dict[str, Any],
-        expected_output: Any
+        expected_output: Any,
+        spark_config: Optional[SparkConfig] = None
     ) -> RunResult:
         """
         Evaluate user code for a puzzle using real Spark execution tracking.
@@ -52,24 +55,31 @@ class JudgeV2:
 
         # Execute the code with V2 executor
         result, output_log, error, metadata, job_group_id = self.executor.execute(
-            code, input_data, execution_id
+            code, input_data, execution_id, spark_config=spark_config
         )
 
         # If there was an execution error
         if error:
-            return self._create_error_result(error, output_log, code)
+            return self._create_error_result(error, output_log, code, expected_output)
 
         # Extract app_id for Spark UI link and event fetching
         app_id = metadata.get('app_id') if metadata else None
 
-        # Fetch REAL execution data from Spark REST API
+        # Build execution simulation from Spark events
         execution_simulation = None
         if app_id and job_group_id:
-            print(f"Fetching real execution data for app {app_id}, job group {job_group_id}")
+            # Prefer the pre-fetched tree from the active Spark UI (fetched
+            # before spark.stop() in the executor — zero race condition).
+            # Falls back to History Server polling if not available.
+            pre_fetched_tree = metadata.get('execution_tree') if metadata else None
+            if pre_fetched_tree:
+                print(f"Using pre-fetched execution tree from active Spark UI")
+            else:
+                print(f"Fetching execution data from History Server for app {app_id}")
 
-            # Generate simulation from REAL Spark events
             execution_simulation = self.execution_simulator.generate_simulation_from_events(
-                app_id, job_group_id, metadata
+                app_id, job_group_id, metadata,
+                execution_tree=pre_fetched_tree
             )
 
             if execution_simulation:
@@ -111,9 +121,9 @@ class JudgeV2:
                 print(f"DAG extraction failed, using fallback with {len(operations)} operations")
 
         # Build Spark UI URL
-        spark_ui_url = "http://localhost:18080"
+        spark_ui_url = settings.spark_history_server_url
         if app_id:
-            spark_ui_url = f"http://localhost:18080/history/{app_id}/jobs/"
+            spark_ui_url = f"{settings.spark_history_server_url}/history/{app_id}/jobs/"
 
         # Generate stage flow for interactive visualization
         stage_flow = None
@@ -132,6 +142,7 @@ class JudgeV2:
         return RunResult(
             correct=is_correct,
             output=result,
+            expected_output=expected_output,
             user_code=code,
             metrics=metrics,
             stars=stars,
@@ -143,14 +154,16 @@ class JudgeV2:
             spark_ui_url=spark_ui_url,
             execution_simulation=execution_simulation,
             stage_flow=stage_flow,
-            cluster_config=cluster_config
+            cluster_config=cluster_config,
+            executors_info=metadata.get('executors_info')
         )
 
-    def _create_error_result(self, error: str, output_log: str, code: str) -> RunResult:
+    def _create_error_result(self, error: str, output_log: str, code: str, expected_output: Any = None) -> RunResult:
         """Create RunResult for execution errors."""
         return RunResult(
             correct=False,
             output=None,
+            expected_output=expected_output,
             user_code=code,
             metrics=MetricsResult(
                 time_simulated=0.0,
@@ -343,28 +356,176 @@ class JudgeV2:
             execution_simulation: ExecutionSimulation with real data
 
         Returns:
-            Stage flow dictionary
+            Stage flow dictionary with frontend-compatible structure
         """
         if not execution_simulation or not execution_simulation.stages:
             return None
 
         stages_flow = []
-        for stage in execution_simulation.stages:
+        shuffle_count = 0
+
+        total_stages = len(execution_simulation.stages)
+        for i, stage in enumerate(execution_simulation.stages):
+            # Classify stage type
+            stage_type = self._classify_stage_type(
+                stage.name, stage.operation_type, i, total_stages
+            )
+
+            # Determine if this is a shuffle (use stage_type for consistency)
+            is_shuffle = stage_type == 'shuffle'
+            if is_shuffle:
+                shuffle_count += 1
+
+            # Get partition counts
+            input_partitions = stage.parallelism
+            output_partitions = stage.parallelism
+            if i + 1 < len(execution_simulation.stages):
+                output_partitions = execution_simulation.stages[i + 1].parallelism
+
+            # Check for repartition
+            is_repartition = input_partitions != output_partitions and not is_shuffle
+
+            # Generate a user-friendly stage name
+            display_name = self._get_display_name(stage.name, stage.operation_type, stage_type)
+
             stage_info = {
                 'id': stage.id,
-                'name': stage.name,
+                'name': display_name,
+                'type': stage_type,
+                'operation': stage.operation_type or display_name,
+                'input': {'partitionCount': input_partitions or 1},
+                'output': {'partitionCount': output_partitions or 1},
+                'isShuffle': is_shuffle,
+                'isRepartition': is_repartition,
+                'explanation': self._generate_stage_explanation(display_name, stage_type),
+                'performanceNote': self._generate_performance_note(stage_type, is_shuffle),
+                # Keep original fields for compatibility
                 'operation_type': stage.operation_type,
-                'parallelism': stage.parallelism,
-                'num_tasks': len(stage.tasks),
-                'dependencies': stage.dependencies,
-                'start_time': stage.start_time,
-                'end_time': stage.end_time,
-                'duration': stage.end_time - stage.start_time
+                'parallelism': stage.parallelism or 1,
+                'num_tasks': len(stage.tasks) if stage.tasks else 0,
+                'dependencies': stage.dependencies or [],
+                'start_time': stage.start_time or 0,
+                'end_time': stage.end_time or 0,
+                'duration': (stage.end_time or 0) - (stage.start_time or 0)
             }
             stages_flow.append(stage_info)
 
         return {
             'stages': stages_flow,
+            'shuffleCount': shuffle_count,
+            'explanation': self._generate_pipeline_explanation(stages_flow, shuffle_count),
             'total_stages': len(stages_flow),
             'total_duration': execution_simulation.total_duration
         }
+
+    def _classify_stage_type(self, name: str, operation_type: str, stage_index: int = 0, total_stages: int = 1) -> str:
+        """
+        Classify stage into semantic types for frontend visualization.
+
+        Returns one of: 'scan', 'shuffle', 'aggregate', 'transform', 'output'
+        """
+        name_lower = (name or '').lower()
+        op_lower = (operation_type or '').lower()
+        combined = name_lower + ' ' + op_lower
+
+        # Check for scan operations
+        if any(kw in combined for kw in ['scan', 'inmemory', 'parquet', 'csv', 'json', 'orc']):
+            return 'scan'
+
+        # Check for shuffle/exchange operations
+        if any(kw in combined for kw in ['exchange', 'shuffle', 'repartition', 'coalesce']):
+            return 'shuffle'
+
+        # Check for aggregation operations
+        if any(kw in combined for kw in ['aggregate', 'hashaggregate', 'sortmerge', 'groupby', 'count', 'sum', 'avg']):
+            return 'aggregate'
+
+        # Check for output/collect operations
+        if any(kw in combined for kw in ['collect', 'show', 'topandas', 'write', 'save']):
+            return 'output'
+
+        # Check for join operations (classify as transform)
+        if any(kw in combined for kw in ['join', 'broadcasthashjoin', 'sortmergejoin', 'broadcastnestedloop']):
+            return 'transform'
+
+        # Check for filter/project operations
+        if any(kw in combined for kw in ['filter', 'project', 'select', 'where']):
+            return 'transform'
+
+        # Check for sort operations
+        if any(kw in combined for kw in ['sort', 'orderby']):
+            return 'transform'
+
+        # Heuristics based on position
+        if stage_index == 0:
+            return 'scan'  # First stage is usually data loading
+        if stage_index == total_stages - 1:
+            return 'output'  # Last stage is usually output
+
+        return 'transform'
+
+    def _get_display_name(self, name: str, operation_type: str, stage_type: str) -> str:
+        """Generate a user-friendly display name for a stage."""
+        # If we have a meaningful name from Spark, clean it up
+        if name:
+            # Clean up names like "collect at script.py:123" -> "Collect"
+            name_lower = name.lower()
+
+            # Map common Spark operation names to clean display names
+            name_mappings = {
+                'collect': 'Collect Results',
+                'show': 'Show Results',
+                'topandas': 'Convert to Pandas',
+                'scan': 'Scan Data',
+                'filter': 'Filter',
+                'project': 'Project',
+                'exchange': 'Exchange (Shuffle)',
+                'hashaggregate': 'Hash Aggregate',
+                'sortmerge': 'Sort Merge Join',
+                'broadcasthashjoin': 'Broadcast Hash Join',
+                'sort': 'Sort',
+                'repartition': 'Repartition',
+            }
+
+            for keyword, display in name_mappings.items():
+                if keyword in name_lower:
+                    return display
+
+        # Fallback to type-based names
+        type_names = {
+            'scan': 'Scan Data',
+            'shuffle': 'Exchange (Shuffle)',
+            'aggregate': 'Aggregate',
+            'transform': 'Transform',
+            'output': 'Collect Results'
+        }
+
+        return type_names.get(stage_type, operation_type or name or 'Processing')
+
+    def _generate_stage_explanation(self, name: str, stage_type: str) -> str:
+        """Generate educational explanation for a stage based on its type."""
+        explanations = {
+            'scan': "Reading data from source.\nThis step loads your input data into memory, dividing it into partitions for parallel processing.",
+            'shuffle': "Redistributing data across partitions.\nThis is an expensive operation where data moves between executors over the network. Try to minimize shuffles!",
+            'aggregate': "Aggregating data (groupBy, sum, count, etc.).\nThis combines rows based on keys. If data isn't already partitioned by the key, a shuffle may occur.",
+            'transform': "Transforming data (filter, project, join, etc.).\nThis step processes data within each partition without moving data between executors.",
+            'output': "Collecting results.\nThis gathers the final output from all partitions."
+        }
+        return explanations.get(stage_type, "Processing data...")
+
+    def _generate_performance_note(self, stage_type: str, is_shuffle: bool) -> Optional[str]:
+        """Generate performance tips for specific stage types."""
+        if is_shuffle:
+            return "Warning: Shuffle operations are expensive! Consider using broadcast joins for small tables or repartitioning data strategically."
+        if stage_type == 'aggregate':
+            return "Tip: Aggregations work best when data is already partitioned by the grouping key."
+        return None
+
+    def _generate_pipeline_explanation(self, stages: list, shuffle_count: int) -> str:
+        """Generate overall pipeline explanation."""
+        if shuffle_count == 0:
+            return f"This query executes in {len(stages)} stages with no shuffles - very efficient!"
+        elif shuffle_count == 1:
+            return f"This query executes in {len(stages)} stages with 1 shuffle operation."
+        else:
+            return f"This query executes in {len(stages)} stages with {shuffle_count} shuffles - consider optimizations to reduce data movement."

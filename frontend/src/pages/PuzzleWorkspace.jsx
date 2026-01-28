@@ -26,6 +26,19 @@ function PuzzleWorkspace() {
   const [showExpectedOutput, setShowExpectedOutput] = useState(false);
   const [visibleExpectedRows, setVisibleExpectedRows] = useState(10);
 
+  // Spark Config State (null = use backend default)
+  const PARTITION_OPTIONS = [1, 2, 4, 8, 16, 32, 64, 100, 200];
+  const CORE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const MEMORY_OPTIONS = [
+    { value: '512m', label: '512 MB' },
+    { value: '1g',   label: '1 GB' },
+    { value: '2g',   label: '2 GB' },
+    { value: '4g',   label: '4 GB' },
+  ];
+  const [shufflePartitions, setShufflePartitions] = useState(null);
+  const [executorCores, setExecutorCores] = useState(null);
+  const [executorMemory, setExecutorMemory] = useState(null);
+
   // Submissions State
   const [submissions, setSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -167,7 +180,21 @@ function PuzzleWorkspace() {
       setRunResult(null);
       setBottomTab('results');
 
-      const result = await puzzleService.runPuzzle(puzzleId, code);
+      const config = {};
+      if (shufflePartitions !== null) config.shuffle_partitions = shufflePartitions;
+      if (executorCores !== null) config.executor_cores = executorCores;
+      if (executorMemory !== null) config.executor_memory = executorMemory;
+      const sparkConfig = Object.keys(config).length > 0 ? config : null;
+      const result = await puzzleService.runPuzzle(puzzleId, code, sparkConfig);
+
+      // DEBUG: Log execution factory data
+      console.log('=== EXECUTION FACTORY DEBUG ===');
+      console.log('cluster_config:', JSON.stringify(result.cluster_config, null, 2));
+      console.log('execution_simulation:', JSON.stringify(result.execution_simulation, null, 2));
+      console.log('stage_flow:', JSON.stringify(result.stage_flow, null, 2));
+      console.log('dag_structure:', JSON.stringify(result.dag_structure, null, 2));
+      console.log('metrics:', JSON.stringify(result.metrics, null, 2));
+      console.log('=== END EXECUTION FACTORY DEBUG ===');
 
       // Map API response format to UI format (correct -> success)
       const normalizedResult = {
@@ -413,33 +440,38 @@ function PuzzleWorkspace() {
                               ))}
                             </tbody>
                           </table>
-                          {(puzzle.expected_output.length > 10 || visibleExpectedRows > 10) && (
-                            <div className="more-rows-controls">
-                              {puzzle.expected_output.length > visibleExpectedRows && (
-                                <>
-                                  <div className="more-rows-note">
-                                    ... and {puzzle.expected_output.length - visibleExpectedRows} more rows
-                                  </div>
+                          {(() => {
+                            const totalRows = puzzle.expected_output_total || puzzle.expected_output.length;
+                            return (totalRows > 10 || visibleExpectedRows > 10) && (
+                              <div className="more-rows-controls">
+                                {totalRows > visibleExpectedRows && (
+                                  <>
+                                    <div className="more-rows-note">
+                                      ... and {totalRows - visibleExpectedRows} more rows
+                                    </div>
+                                    {puzzle.expected_output.length > visibleExpectedRows && (
+                                      <button
+                                        className="btn-show-more-rows"
+                                        onClick={() => setVisibleExpectedRows(prev => Math.min(prev + 10, puzzle.expected_output.length))}
+                                      >
+                                        <span className="btn-icon">▼</span>
+                                        Show 10 More
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                {visibleExpectedRows > 10 && (
                                   <button
-                                    className="btn-show-more-rows"
-                                    onClick={() => setVisibleExpectedRows(prev => Math.min(prev + 10, puzzle.expected_output.length))}
+                                    className="btn-show-less-rows"
+                                    onClick={() => setVisibleExpectedRows(10)}
                                   >
-                                    <span className="btn-icon">▼</span>
-                                    Show 10 More
+                                    <span className="btn-icon">▲</span>
+                                    Show Less
                                   </button>
-                                </>
-                              )}
-                              {visibleExpectedRows > 10 && (
-                                <button
-                                  className="btn-show-less-rows"
-                                  onClick={() => setVisibleExpectedRows(10)}
-                                >
-                                  <span className="btn-icon">▲</span>
-                                  Show Less
-                                </button>
-                              )}
-                            </div>
-                          )}
+                                )}
+                              </div>
+                            );
+                          })()}
                         </>
                       ) : (
                         <pre className="example-code">{JSON.stringify(puzzle.expected_output, null, 2)}</pre>
@@ -634,6 +666,48 @@ function PuzzleWorkspace() {
               <option value="python">PySpark</option>
               <option value="scala">Scala</option>
             </select>
+
+            <div className="spark-config-controls">
+              <div className="config-control">
+                <label className="config-label">Partitions</label>
+                <select
+                  className="config-select"
+                  value={shufflePartitions ?? ''}
+                  onChange={(e) => setShufflePartitions(e.target.value === '' ? null : Number(e.target.value))}
+                >
+                  <option value="">Default</option>
+                  {PARTITION_OPTIONS.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="config-control">
+                <label className="config-label">Cores</label>
+                <select
+                  className="config-select"
+                  value={executorCores ?? ''}
+                  onChange={(e) => setExecutorCores(e.target.value === '' ? null : Number(e.target.value))}
+                >
+                  <option value="">Default</option>
+                  {CORE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="config-control">
+                <label className="config-label">Memory</label>
+                <select
+                  className="config-select"
+                  value={executorMemory ?? ''}
+                  onChange={(e) => setExecutorMemory(e.target.value === '' ? null : e.target.value)}
+                >
+                  <option value="">Default</option>
+                  {MEMORY_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="editor-main-container">
@@ -685,7 +759,7 @@ function PuzzleWorkspace() {
                 >
                   Summary
                   {runResult && runResult.metrics && (
-                    <span className="summary-badge">{runResult.metrics.shuffles}S</span>
+                    <span className="summary-badge">{runResult.execution_simulation?.total_duration.toFixed(0)}S</span>
                   )}
                 </button>
                 <button

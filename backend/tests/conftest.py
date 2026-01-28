@@ -9,13 +9,25 @@ Provides:
 
 import pytest
 from typing import Dict, Any
+import os
 
 from app.config import settings
 
 
 # =============================================================================
-# Configuration (from settings)
+# Configuration Overrides for Local Testing
 # =============================================================================
+
+# Override settings for local testing (localhost instead of Docker service names)
+# These are applied before any tests run
+os.environ.setdefault("SPARK_MASTER_URL", "spark://localhost:7077")
+os.environ.setdefault("SPARK_HISTORY_SERVER_URL", "http://localhost:18080")
+os.environ.setdefault("SPARK_ACTIVE_UI_URL", "http://localhost:4040")
+os.environ.setdefault("MINIO_ENDPOINT", "http://localhost:9000")
+os.environ.setdefault("DATABASE_URL", "postgresql://postgres:password@localhost:5432/spark_playground")
+
+# Reload settings with test overrides
+settings.__init__()
 
 EVENT_WAIT_TIMEOUT = 5.0
 
@@ -56,12 +68,18 @@ def group_fruits_puzzle() -> Dict[str, Any]:
             {"id": 4, "type": "orange", "color": "orange"},
         ],
         'correct_code': """
-def solve(fruits):
-    return fruits.orderBy('type')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('type')
 """,
         'incorrect_code': """
-def solve(fruits):
-    return fruits.orderBy('color')
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, fruits: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(fruits)
+    return df.orderBy('color')
 """,
     }
 
@@ -88,13 +106,21 @@ def fast_join_puzzle() -> Dict[str, Any]:
             {"order_id": 3, "product_id": 101, "quantity": 2, "name": "Widget", "price": 10.0},
         ],
         'optimal_code': """
-def solve(orders, products):
-    from pyspark.sql.functions import broadcast
-    return orders.join(broadcast(products), "product_id")
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import broadcast
+
+def solve(spark: SparkSession, orders: list[dict], products: list[dict]) -> DataFrame:
+    orders_df = spark.createDataFrame(orders)
+    products_df = spark.createDataFrame(products)
+    return orders_df.join(broadcast(products_df), "product_id")
 """,
         'suboptimal_code': """
-def solve(orders, products):
-    return orders.join(products, "product_id")
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, orders: list[dict], products: list[dict]) -> DataFrame:
+    orders_df = spark.createDataFrame(orders)
+    products_df = spark.createDataFrame(products)
+    return orders_df.join(products_df, "product_id")
 """,
     }
 
@@ -119,8 +145,11 @@ def filter_merge_puzzle() -> Dict[str, Any]:
             {"tx_id": 5, "amount": 300, "status": "completed"},
         ],
         'optimal_code': """
-def solve(transactions):
-    return transactions.filter(transactions.status == "completed")
+from pyspark.sql import SparkSession, DataFrame
+
+def solve(spark: SparkSession, transactions: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(transactions)
+    return df.filter(df.status == "completed")
 """,
     }
 
@@ -145,9 +174,12 @@ def aggregation_puzzle() -> Dict[str, Any]:
             {"category": "Food", "total": 30},
         ],
         'correct_code': """
-def solve(sales):
-    from pyspark.sql.functions import sum as spark_sum
-    return sales.groupBy("category").agg(spark_sum("amount").alias("total")).orderBy("category")
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import sum as spark_sum
+
+def solve(spark: SparkSession, sales: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(sales)
+    return df.groupBy("category").agg(spark_sum("amount").alias("total")).orderBy("category")
 """,
     }
 
@@ -176,9 +208,13 @@ def cache_puzzle() -> Dict[str, Any]:
             ],
         },
         'optimal_code': """
-def solve(data):
-    from pyspark.sql.functions import count as spark_count, sum as spark_sum
-    cached = data.cache()
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import count as spark_count, sum as spark_sum
+
+def solve(spark: SparkSession, data: list[dict]) -> DataFrame:
+    df = spark.createDataFrame(data)
+    cached = df.cache()
+    # Note: This puzzle returns dict, not compatible with V2 single DataFrame return
     counts = cached.groupBy("category").agg(spark_count("*").alias("count")).orderBy("category").collect()
     sums = cached.groupBy("category").agg(spark_sum("value").alias("total")).orderBy("category").collect()
     return {
@@ -213,14 +249,18 @@ def complex_etl_puzzle() -> Dict[str, Any]:
             {"user_id": 3, "name": "Charlie", "total_spent": 16.0},
         ],
         'correct_code': """
-def solve(users, purchases):
-    from pyspark.sql.functions import sum as spark_sum
+from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import sum as spark_sum
+
+def solve(spark: SparkSession, users: list[dict], purchases: list[dict]) -> DataFrame:
+    users_df = spark.createDataFrame(users)
+    purchases_df = spark.createDataFrame(purchases)
 
     # Filter adults (age >= 30)
-    adults = users.filter(users.age >= 30)
+    adults = users_df.filter(users_df.age >= 30)
 
     # Aggregate purchases
-    user_spending = purchases.groupBy("user_id").agg(spark_sum("price").alias("total_spent"))
+    user_spending = purchases_df.groupBy("user_id").agg(spark_sum("price").alias("total_spent"))
 
     # Join and select
     result = adults.join(user_spending, "user_id").select("user_id", "name", "total_spent")
