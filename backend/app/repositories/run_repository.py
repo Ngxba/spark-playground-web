@@ -42,7 +42,8 @@ class RunRepository:
             stage_flow_json=result.stage_flow,
             cluster_config_json=result.cluster_config,
             dag_structure_json=result.dag_structure,
-            executors_info_json=[executor.dict() for executor in result.executors_info] if result.executors_info else None
+            executors_info_json=[executor.dict() for executor in result.executors_info] if result.executors_info else None,
+            sankey_spec_json=result.sankey_spec,
         )
         db.add(execution_data)
 

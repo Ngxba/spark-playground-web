@@ -1,0 +1,288 @@
+{
+  "specVersion": "spark-sankey/v1",
+  "meta": {
+    "title": "3-Way SortMergeJoin Pipeline",
+    "generatedAt": "2024-01-20T14:00:00Z",
+    "engine": "Spark 3.5.0",
+    "notes": "Sales + Products + Inventory joined by product_id into Enriched Sales"
+  },
+  "metrics": {
+    "primary": "records",
+    "secondary": ["bytes"],
+    "format": {
+      "records": { "suffix": "", "decimals": 0 },
+      "bytes": { "suffix": "B", "decimals": 1, "scale": "auto" }
+    }
+  },
+  "viewPresets": [
+    {
+      "id": "all",
+      "label": "Full Pipeline",
+      "description": "Show all stages and transformations",
+      "includeNodeTypes": ["dataset", "bucketGroup", "operator", "result"],
+      "includeStageIds": ["stage_1"]
+    },
+    {
+      "id": "shuffle_focus",
+      "label": "Shuffle Distribution",
+      "description": "Focus on shuffle partition distribution",
+      "includeNodeTypes": ["bucketGroup"],
+      "includeStageIds": ["stage_1"]
+    },
+    {
+      "id": "sources_only",
+      "label": "Source DataFrames",
+      "description": "Focus on input datasets",
+      "includeNodeTypes": ["dataset"],
+      "includeStageIds": ["stage_1"]
+    }
+  ],
+  "datasets": [
+    {
+      "id": "sales_df",
+      "name": "Sales DF",
+      "partitions": 16,
+      "records": 5000000,
+      "bytes": 1073741824
+    },
+    {
+      "id": "products_df",
+      "name": "Products DF",
+      "partitions": 4,
+      "records": 50000,
+      "bytes": 26214400
+    },
+    {
+      "id": "inventory_df",
+      "name": "Inventory DF",
+      "partitions": 8,
+      "records": 100000,
+      "bytes": 52428800
+    }
+  ],
+  "stages": [
+    {
+      "id": "stage_1",
+      "label": "Stage 1: Join",
+      "description": "3-way SortMergeJoin on product_id"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "sales_df",
+      "type": "dataset",
+      "label": "Sales DF",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 5000000, "bytes": 1073741824 },
+      "meta": { "partitions": 16 }
+    },
+    {
+      "id": "products_df",
+      "type": "dataset",
+      "label": "Products DF",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 50000, "bytes": 26214400 },
+      "meta": { "partitions": 4 }
+    },
+    {
+      "id": "inventory_df",
+      "type": "dataset",
+      "label": "Inventory DF",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 100000, "bytes": 52428800 },
+      "meta": { "partitions": 8 }
+    },
+    {
+      "id": "exchange_1",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 1,
+      "stageId": "stage_1",
+      "keys": ["product_id"],
+      "shufflePartitions": 100
+    },
+    {
+      "id": "bucket_0",
+      "type": "bucketGroup",
+      "label": "R0-R24",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [0, 24],
+      "partitionCount": 25,
+      "isSkewed": false,
+      "metrics": { "records": 1287500, "bytes": 276627200 }
+    },
+    {
+      "id": "bucket_1",
+      "type": "bucketGroup",
+      "label": "R25-R49",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [25, 49],
+      "partitionCount": 25,
+      "isSkewed": true,
+      "skewReason": "Hot key: product_SKU-0001 (bestseller)",
+      "metrics": { "records": 2060000, "bytes": 442726400 }
+    },
+    {
+      "id": "bucket_2",
+      "type": "bucketGroup",
+      "label": "R50-R74",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [50, 74],
+      "partitionCount": 25,
+      "isSkewed": false,
+      "metrics": { "records": 1287500, "bytes": 276627200 }
+    },
+    {
+      "id": "bucket_3",
+      "type": "bucketGroup",
+      "label": "R75-R99",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [75, 99],
+      "partitionCount": 25,
+      "isSkewed": false,
+      "metrics": { "records": 515000, "bytes": 110650880 }
+    },
+    {
+      "id": "join_op",
+      "type": "operator",
+      "label": "SortMergeJoin",
+      "layer": 3,
+      "stageId": "stage_1",
+      "operatorType": "SortMergeJoin",
+      "description": "3-way JOIN ON product_id",
+      "metrics": { "records": 4800000, "bytes": 1200000000 }
+    },
+    {
+      "id": "result_df",
+      "type": "result",
+      "label": "Enriched Sales",
+      "layer": 4,
+      "stageId": "stage_1",
+      "metrics": { "records": 4800000, "bytes": 1200000000 },
+      "meta": { "partitions": 100 }
+    }
+  ],
+  "links": [
+    {
+      "id": "link_sales_b0",
+      "source": "sales_df",
+      "target": "bucket_0",
+      "metrics": { "records": 1250000, "bytes": 268435456 },
+      "meta": { "routing": "hash(product_id) % 100 -> [0-24]" }
+    },
+    {
+      "id": "link_sales_b1",
+      "source": "sales_df",
+      "target": "bucket_1",
+      "metrics": { "records": 2000000, "bytes": 429496730 },
+      "meta": { "routing": "hash(product_id) % 100 -> [25-49]" }
+    },
+    {
+      "id": "link_sales_b2",
+      "source": "sales_df",
+      "target": "bucket_2",
+      "metrics": { "records": 1250000, "bytes": 268435456 },
+      "meta": { "routing": "hash(product_id) % 100 -> [50-74]" }
+    },
+    {
+      "id": "link_sales_b3",
+      "source": "sales_df",
+      "target": "bucket_3",
+      "metrics": { "records": 500000, "bytes": 107374182 },
+      "meta": { "routing": "hash(product_id) % 100 -> [75-99]" }
+    },
+    {
+      "id": "link_products_b0",
+      "source": "products_df",
+      "target": "bucket_0",
+      "metrics": { "records": 12500, "bytes": 6553600 },
+      "meta": { "routing": "hash(product_id) % 100 -> [0-24]" }
+    },
+    {
+      "id": "link_products_b1",
+      "source": "products_df",
+      "target": "bucket_1",
+      "metrics": { "records": 20000, "bytes": 10485760 },
+      "meta": { "routing": "hash(product_id) % 100 -> [25-49]" }
+    },
+    {
+      "id": "link_products_b2",
+      "source": "products_df",
+      "target": "bucket_2",
+      "metrics": { "records": 12500, "bytes": 6553600 },
+      "meta": { "routing": "hash(product_id) % 100 -> [50-74]" }
+    },
+    {
+      "id": "link_products_b3",
+      "source": "products_df",
+      "target": "bucket_3",
+      "metrics": { "records": 5000, "bytes": 2621440 },
+      "meta": { "routing": "hash(product_id) % 100 -> [75-99]" }
+    },
+    {
+      "id": "link_inventory_b0",
+      "source": "inventory_df",
+      "target": "bucket_0",
+      "metrics": { "records": 25000, "bytes": 13107200 },
+      "meta": { "routing": "hash(product_id) % 100 -> [0-24]" }
+    },
+    {
+      "id": "link_inventory_b1",
+      "source": "inventory_df",
+      "target": "bucket_1",
+      "metrics": { "records": 40000, "bytes": 20971520 },
+      "meta": { "routing": "hash(product_id) % 100 -> [25-49]" }
+    },
+    {
+      "id": "link_inventory_b2",
+      "source": "inventory_df",
+      "target": "bucket_2",
+      "metrics": { "records": 25000, "bytes": 13107200 },
+      "meta": { "routing": "hash(product_id) % 100 -> [50-74]" }
+    },
+    {
+      "id": "link_inventory_b3",
+      "source": "inventory_df",
+      "target": "bucket_3",
+      "metrics": { "records": 10000, "bytes": 5242880 },
+      "meta": { "routing": "hash(product_id) % 100 -> [75-99]" }
+    },
+    {
+      "id": "link_b0_join",
+      "source": "bucket_0",
+      "target": "join_op",
+      "metrics": { "records": 1287500, "bytes": 276627200 }
+    },
+    {
+      "id": "link_b1_join",
+      "source": "bucket_1",
+      "target": "join_op",
+      "metrics": { "records": 2060000, "bytes": 442726400 }
+    },
+    {
+      "id": "link_b2_join",
+      "source": "bucket_2",
+      "target": "join_op",
+      "metrics": { "records": 1287500, "bytes": 276627200 }
+    },
+    {
+      "id": "link_b3_join",
+      "source": "bucket_3",
+      "target": "join_op",
+      "metrics": { "records": 515000, "bytes": 110650880 }
+    },
+    {
+      "id": "link_join_result",
+      "source": "join_op",
+      "target": "result_df",
+      "metrics": { "records": 4800000, "bytes": 1200000000 }
+    }
+  ]
+}

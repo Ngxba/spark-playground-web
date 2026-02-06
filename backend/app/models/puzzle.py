@@ -71,3 +71,7 @@ class RunResult(BaseModel):
     stage_flow: Optional[Dict[str, Any]] = Field(default=None, description="Stage-by-stage execution flow for interactive visualization")
     cluster_config: Optional[Dict[str, Any]] = Field(default=None, description="Spark cluster configuration and resource information")
     executors_info: Optional[List[ExecutorInfo]] = Field(default=None, description="Spark executors information")
+    sankey_spec: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Sankey visualization spec (spark-sankey/v1) for Timeline View"
+    )

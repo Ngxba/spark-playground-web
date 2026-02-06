@@ -6,6 +6,7 @@ import ExecutionInsights from '../components/ExecutionInsights';
 import ProgressiveHints from '../components/ProgressiveHints';
 import QueryPlanViewer from '../components/QueryPlanViewer';
 import FactoryViewRedesigned from '../components/FactoryView/FactoryViewRedesigned';
+import SankeyTimelineDashboard from '../components/FactoryView/SankeyTimelineDashboard';
 import StageFlowView from '../components/FactoryView/StageFlowView';
 import ClusterOverview from '../components/ClusterOverview';
 import './ReportPage.css';
@@ -106,6 +107,12 @@ function ReportPage() {
             onClick={() => setActiveTab('factory-steps')}
           >
             Factory Step Breakdown
+          </button>
+          <button
+            className={`report-tab ${activeTab === 'timeline' ? 'active' : ''}`}
+            onClick={() => setActiveTab('timeline')}
+          >
+            Timeline View
           </button>
           <button
             className={`report-tab ${activeTab === 'results' ? 'active' : ''}`}
@@ -247,6 +254,12 @@ function ReportPage() {
           {activeTab === 'factory-steps' && (
             <StageFlowView
               stageFlowData={result.stage_flow}
+            />
+          )}
+
+          {activeTab === 'timeline' && (
+            <SankeyTimelineDashboard
+              sankeySpec={result?.sankey_spec}
             />
           )}
 

@@ -1,0 +1,435 @@
+{
+  "specVersion": "spark-sankey/v1",
+  "meta": {
+    "title": "Multi-Exchange SortMergeJoin Pipeline",
+    "generatedAt": "2024-01-15T10:30:00Z",
+    "engine": "Spark 3.5.0",
+    "notes": "Orders aggregated by order_id, then joined with Customers by customer_id"
+  },
+  "metrics": {
+    "primary": "records",
+    "secondary": ["bytes"],
+    "format": {
+      "records": { "suffix": "", "decimals": 0 },
+      "bytes": { "suffix": "B", "decimals": 1, "scale": "auto" }
+    }
+  },
+  "viewPresets": [
+    {
+      "id": "all",
+      "label": "Full Pipeline",
+      "description": "Show all stages and transformations",
+      "includeNodeTypes": ["dataset", "bucketGroup", "operator", "result"],
+      "includeStageIds": ["stage_1", "stage_2"]
+    },
+    {
+      "id": "stage_1",
+      "label": "Stage 1: Aggregation",
+      "description": "Focus on order aggregation",
+      "includeNodeTypes": ["dataset", "bucketGroup", "operator"],
+      "includeStageIds": ["stage_1"]
+    },
+    {
+      "id": "stage_2",
+      "label": "Stage 2: Join",
+      "description": "Focus on customer join",
+      "includeNodeTypes": ["dataset", "bucketGroup", "operator", "result"],
+      "includeStageIds": ["stage_2"]
+    }
+  ],
+  "datasets": [
+    {
+      "id": "orders_df",
+      "name": "Orders DF",
+      "partitions": 8,
+      "records": 10000000,
+      "bytes": 2576980378
+    },
+    {
+      "id": "customers_df",
+      "name": "Customers DF",
+      "partitions": 20,
+      "records": 500000,
+      "bytes": 125829120
+    }
+  ],
+  "stages": [
+    {
+      "id": "stage_1",
+      "label": "Stage 1: Aggregate",
+      "description": "Aggregate orders by order_id, then get distinct customers"
+    },
+    {
+      "id": "stage_2",
+      "label": "Stage 2: Join",
+      "description": "SortMergeJoin on customer_id"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "orders_df",
+      "type": "dataset",
+      "label": "Orders DF",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 10000000, "bytes": 2576980378 },
+      "meta": { "partitions": 8 }
+    },
+    {
+      "id": "exchange_1",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 1,
+      "stageId": "stage_1",
+      "keys": ["order_id"],
+      "shufflePartitions": 200
+    },
+    {
+      "id": "bucket_1_0",
+      "type": "bucketGroup",
+      "label": "R0-R39",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [0, 39],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 1538461, "bytes": 396458520 }
+    },
+    {
+      "id": "bucket_1_1",
+      "type": "bucketGroup",
+      "label": "R40-R79",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [40, 79],
+      "partitionCount": 40,
+      "isSkewed": true,
+      "skewReason": "Hot key: order_123456",
+      "metrics": { "records": 4615384, "bytes": 1189375560 }
+    },
+    {
+      "id": "bucket_1_2",
+      "type": "bucketGroup",
+      "label": "R80-R119",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [80, 119],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 1538461, "bytes": 396458520 }
+    },
+    {
+      "id": "bucket_1_3",
+      "type": "bucketGroup",
+      "label": "R120-R159",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [120, 159],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 769230, "bytes": 198229260 }
+    },
+    {
+      "id": "bucket_1_4",
+      "type": "bucketGroup",
+      "label": "R160-R199",
+      "layer": 2,
+      "stageId": "stage_1",
+      "partitionRange": [160, 199],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 1538461, "bytes": 396458520 }
+    },
+    {
+      "id": "aggregate_op",
+      "type": "operator",
+      "label": "Aggregate",
+      "layer": 3,
+      "stageId": "stage_1",
+      "operatorType": "HashAggregate",
+      "description": "sum(amount), count(*) GROUP BY customer_id",
+      "metrics": { "records": 8000000, "bytes": 2000000000 }
+    },
+    {
+      "id": "distinct_df",
+      "type": "dataset",
+      "label": "Distinct DF",
+      "layer": 4,
+      "stageId": "stage_1",
+      "metrics": { "records": 400000, "bytes": 100000000 },
+      "meta": { "partitions": 200 }
+    },
+    {
+      "id": "customers_df_node",
+      "type": "dataset",
+      "label": "Customers DF",
+      "layer": 4,
+      "stageId": "stage_2",
+      "metrics": { "records": 500000, "bytes": 125829120 },
+      "meta": { "partitions": 20 }
+    },
+    {
+      "id": "exchange_2",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 5,
+      "stageId": "stage_2",
+      "keys": ["customer_id"],
+      "shufflePartitions": 200
+    },
+    {
+      "id": "bucket_2_0",
+      "type": "bucketGroup",
+      "label": "R0-R39",
+      "layer": 6,
+      "stageId": "stage_2",
+      "partitionRange": [0, 39],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "bucket_2_1",
+      "type": "bucketGroup",
+      "label": "R40-R79",
+      "layer": 6,
+      "stageId": "stage_2",
+      "partitionRange": [40, 79],
+      "partitionCount": 40,
+      "isSkewed": true,
+      "skewReason": "Hot key: guest_account",
+      "metrics": { "records": 360000, "bytes": 90000000 }
+    },
+    {
+      "id": "bucket_2_2",
+      "type": "bucketGroup",
+      "label": "R80-R119",
+      "layer": 6,
+      "stageId": "stage_2",
+      "partitionRange": [80, 119],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "bucket_2_3",
+      "type": "bucketGroup",
+      "label": "R120-R159",
+      "layer": 6,
+      "stageId": "stage_2",
+      "partitionRange": [120, 159],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 90000, "bytes": 22500000 }
+    },
+    {
+      "id": "bucket_2_4",
+      "type": "bucketGroup",
+      "label": "R160-R199",
+      "layer": 6,
+      "stageId": "stage_2",
+      "partitionRange": [160, 199],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "join_op",
+      "type": "operator",
+      "label": "SortMergeJoin",
+      "layer": 7,
+      "stageId": "stage_2",
+      "operatorType": "SortMergeJoin",
+      "description": "JOIN ON customer_id",
+      "metrics": { "records": 10500000, "bytes": 2702809500 }
+    },
+    {
+      "id": "result_df",
+      "type": "result",
+      "label": "Result DF",
+      "layer": 8,
+      "stageId": "stage_2",
+      "metrics": { "records": 10500000, "bytes": 2702809500 },
+      "meta": { "partitions": 200 }
+    }
+  ],
+  "links": [
+    {
+      "id": "link_orders_bucket_1_0",
+      "source": "orders_df",
+      "target": "bucket_1_0",
+      "metrics": { "records": 1538461, "bytes": 396458520 },
+      "meta": { "routing": "hash(order_id) % 200 -> [0-39]" }
+    },
+    {
+      "id": "link_orders_bucket_1_1",
+      "source": "orders_df",
+      "target": "bucket_1_1",
+      "metrics": { "records": 4615384, "bytes": 1189375560 },
+      "meta": { "routing": "hash(order_id) % 200 -> [40-79]" }
+    },
+    {
+      "id": "link_orders_bucket_1_2",
+      "source": "orders_df",
+      "target": "bucket_1_2",
+      "metrics": { "records": 1538461, "bytes": 396458520 },
+      "meta": { "routing": "hash(order_id) % 200 -> [80-119]" }
+    },
+    {
+      "id": "link_orders_bucket_1_3",
+      "source": "orders_df",
+      "target": "bucket_1_3",
+      "metrics": { "records": 769230, "bytes": 198229260 },
+      "meta": { "routing": "hash(order_id) % 200 -> [120-159]" }
+    },
+    {
+      "id": "link_orders_bucket_1_4",
+      "source": "orders_df",
+      "target": "bucket_1_4",
+      "metrics": { "records": 1538461, "bytes": 396458520 },
+      "meta": { "routing": "hash(order_id) % 200 -> [160-199]" }
+    },
+    {
+      "id": "link_bucket_1_0_agg",
+      "source": "bucket_1_0",
+      "target": "aggregate_op",
+      "metrics": { "records": 1230769, "bytes": 307692300 }
+    },
+    {
+      "id": "link_bucket_1_1_agg",
+      "source": "bucket_1_1",
+      "target": "aggregate_op",
+      "metrics": { "records": 3692307, "bytes": 923076750 }
+    },
+    {
+      "id": "link_bucket_1_2_agg",
+      "source": "bucket_1_2",
+      "target": "aggregate_op",
+      "metrics": { "records": 1230769, "bytes": 307692300 }
+    },
+    {
+      "id": "link_bucket_1_3_agg",
+      "source": "bucket_1_3",
+      "target": "aggregate_op",
+      "metrics": { "records": 615384, "bytes": 153846000 }
+    },
+    {
+      "id": "link_bucket_1_4_agg",
+      "source": "bucket_1_4",
+      "target": "aggregate_op",
+      "metrics": { "records": 1230769, "bytes": 307692300 }
+    },
+    {
+      "id": "link_agg_distinct",
+      "source": "aggregate_op",
+      "target": "distinct_df",
+      "metrics": { "records": 400000, "bytes": 100000000 }
+    },
+    {
+      "id": "link_distinct_bucket_2_0",
+      "source": "distinct_df",
+      "target": "bucket_2_0",
+      "metrics": { "records": 80000, "bytes": 20000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [0-39]" }
+    },
+    {
+      "id": "link_distinct_bucket_2_1",
+      "source": "distinct_df",
+      "target": "bucket_2_1",
+      "metrics": { "records": 160000, "bytes": 40000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [40-79]" }
+    },
+    {
+      "id": "link_distinct_bucket_2_2",
+      "source": "distinct_df",
+      "target": "bucket_2_2",
+      "metrics": { "records": 80000, "bytes": 20000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [80-119]" }
+    },
+    {
+      "id": "link_distinct_bucket_2_3",
+      "source": "distinct_df",
+      "target": "bucket_2_3",
+      "metrics": { "records": 40000, "bytes": 10000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [120-159]" }
+    },
+    {
+      "id": "link_distinct_bucket_2_4",
+      "source": "distinct_df",
+      "target": "bucket_2_4",
+      "metrics": { "records": 80000, "bytes": 20000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [160-199]" }
+    },
+    {
+      "id": "link_customers_bucket_2_0",
+      "source": "customers_df_node",
+      "target": "bucket_2_0",
+      "metrics": { "records": 100000, "bytes": 25000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [0-39]" }
+    },
+    {
+      "id": "link_customers_bucket_2_1",
+      "source": "customers_df_node",
+      "target": "bucket_2_1",
+      "metrics": { "records": 200000, "bytes": 50000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [40-79]" }
+    },
+    {
+      "id": "link_customers_bucket_2_2",
+      "source": "customers_df_node",
+      "target": "bucket_2_2",
+      "metrics": { "records": 100000, "bytes": 25000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [80-119]" }
+    },
+    {
+      "id": "link_customers_bucket_2_3",
+      "source": "customers_df_node",
+      "target": "bucket_2_3",
+      "metrics": { "records": 50000, "bytes": 12500000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [120-159]" }
+    },
+    {
+      "id": "link_customers_bucket_2_4",
+      "source": "customers_df_node",
+      "target": "bucket_2_4",
+      "metrics": { "records": 100000, "bytes": 25000000 },
+      "meta": { "routing": "hash(customer_id) % 200 -> [160-199]" }
+    },
+    {
+      "id": "link_bucket_2_0_join",
+      "source": "bucket_2_0",
+      "target": "join_op",
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "link_bucket_2_1_join",
+      "source": "bucket_2_1",
+      "target": "join_op",
+      "metrics": { "records": 360000, "bytes": 90000000 }
+    },
+    {
+      "id": "link_bucket_2_2_join",
+      "source": "bucket_2_2",
+      "target": "join_op",
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "link_bucket_2_3_join",
+      "source": "bucket_2_3",
+      "target": "join_op",
+      "metrics": { "records": 90000, "bytes": 22500000 }
+    },
+    {
+      "id": "link_bucket_2_4_join",
+      "source": "bucket_2_4",
+      "target": "join_op",
+      "metrics": { "records": 180000, "bytes": 45000000 }
+    },
+    {
+      "id": "link_join_result",
+      "source": "join_op",
+      "target": "result_df",
+      "metrics": { "records": 10500000, "bytes": 2702809500 }
+    }
+  ]
+}

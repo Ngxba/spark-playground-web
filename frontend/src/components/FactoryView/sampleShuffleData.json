@@ -1,0 +1,96 @@
+{
+  "joinType": "SortMergeJoin",
+  "joinKey": "customer_id",
+  "shufflePartitions": 200,
+
+  "sources": [
+    {
+      "id": "orders",
+      "name": "Orders DF",
+      "partitions": 8,
+      "records": 10000000,
+      "bytes": 2576980378
+    },
+    {
+      "id": "customers",
+      "name": "Customers DF",
+      "partitions": 20,
+      "records": 500000,
+      "bytes": 125829120
+    }
+  ],
+
+  "shuffleBuckets": [
+    {
+      "id": "bucket_0",
+      "label": "R0-R39",
+      "partitionRange": [0, 39],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "contributions": [
+        { "sourceId": "orders", "bytes": 396458520, "records": 1538461 },
+        { "sourceId": "customers", "bytes": 19358633, "records": 76923 }
+      ]
+    },
+    {
+      "id": "bucket_1",
+      "label": "R40-R79",
+      "partitionRange": [40, 79],
+      "partitionCount": 40,
+      "isSkewed": true,
+      "skewReason": "Hot key: guest_account",
+      "contributions": [
+        { "sourceId": "orders", "bytes": 1189375560, "records": 4615384 },
+        { "sourceId": "customers", "bytes": 58075900, "records": 230769 }
+      ]
+    },
+    {
+      "id": "bucket_2",
+      "label": "R80-R119",
+      "partitionRange": [80, 119],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "contributions": [
+        { "sourceId": "orders", "bytes": 396458520, "records": 1538461 },
+        { "sourceId": "customers", "bytes": 19358633, "records": 76923 }
+      ]
+    },
+    {
+      "id": "bucket_3",
+      "label": "R120-R159",
+      "partitionRange": [120, 159],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "contributions": [
+        { "sourceId": "orders", "bytes": 198229260, "records": 769230 },
+        { "sourceId": "customers", "bytes": 9679316, "records": 38461 }
+      ]
+    },
+    {
+      "id": "bucket_4",
+      "label": "R160-R199",
+      "partitionRange": [160, 199],
+      "partitionCount": 40,
+      "isSkewed": false,
+      "contributions": [
+        { "sourceId": "orders", "bytes": 396458520, "records": 1538461 },
+        { "sourceId": "customers", "bytes": 19358633, "records": 76923 }
+      ]
+    }
+  ],
+
+  "result": {
+    "id": "result",
+    "name": "Joined DF",
+    "partitions": 200,
+    "records": 10500000,
+    "bytes": 2702809500
+  },
+
+  "metrics": {
+    "totalShuffleBytes": 2702809498,
+    "totalShuffleRecords": 10500000,
+    "skewRatio": 3.0,
+    "executionTimeMs": 4200
+  }
+}

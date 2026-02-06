@@ -111,6 +111,7 @@ async def get_run_detail(
         "cluster_config": run.execution_data.cluster_config_json if run.execution_data else None,
         "dag_structure": run.execution_data.dag_structure_json if run.execution_data else None,
         "executors_info": run.execution_data.executors_info_json if run.execution_data else None,
+        "sankey_spec": run.execution_data.sankey_spec_json if run.execution_data else None,
         "physical_plan": run.execution_plan.physical_plan if run.execution_plan else None,
         "logical_plan": run.execution_plan.logical_plan if run.execution_plan else None,
         "spark_ui_url": run.execution_plan.spark_ui_url if run.execution_plan else None,

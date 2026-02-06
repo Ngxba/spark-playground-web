@@ -33,5 +33,11 @@ class Settings(BaseSettings):
     # PySpark JARs
     pyspark_jars_dir: str = "pyspark_jars"
 
+    # Sankey Spec Generator
+    sankey_bucket_count: int = 4
+    sankey_skew_p95_median_ratio: float = 2.0
+    sankey_skew_max_avg_ratio: float = 3.0
+    sankey_link_max_width: int = 80
+
 
 settings = Settings()

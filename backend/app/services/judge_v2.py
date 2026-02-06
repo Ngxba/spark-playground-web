@@ -130,6 +130,27 @@ class JudgeV2:
         if execution_simulation:
             stage_flow = self._generate_stage_flow_from_simulation(execution_simulation)
 
+        # Generate Sankey spec for Timeline View
+        sankey_spec = None
+        if metadata and execution_simulation:
+            from app.services.sankey_spec_generator import SankeySpecGenerator
+            try:
+                generator = SankeySpecGenerator()
+                physical_plan = metadata.get('physical_plan', '')
+                has_join = any(kw in (physical_plan or '') for kw in ['SortMergeJoin', 'BroadcastHashJoin', 'BroadcastNestedLoopJoin'])
+                if not has_join:
+                    print(f"Sankey: No join operators in physical plan — skipping (query has no joins)")
+                else:
+                    sankey_spec = generator.generate(metadata, execution_simulation)
+                    if sankey_spec:
+                        print(f"Generated Sankey spec with {len(sankey_spec.get('stages', []))} stages")
+                    else:
+                        print(f"Sankey: Generator returned None (could not map joins to stages)")
+            except Exception as e:
+                print(f"Warning: Sankey spec generation failed: {e}")
+                import traceback
+                traceback.print_exc()
+
         # Extract cluster configuration
         cluster_config = None
         if metadata and 'cluster_config' in metadata:
@@ -155,7 +176,8 @@ class JudgeV2:
             execution_simulation=execution_simulation,
             stage_flow=stage_flow,
             cluster_config=cluster_config,
-            executors_info=metadata.get('executors_info')
+            executors_info=metadata.get('executors_info'),
+            sankey_spec=sankey_spec,
         )
 
     def _create_error_result(self, error: str, output_log: str, code: str, expected_output: Any = None) -> RunResult:

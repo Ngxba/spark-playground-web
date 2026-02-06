@@ -1,0 +1,576 @@
+{
+  "specVersion": "spark-sankey/v1",
+  "meta": {
+    "title": "A + B \u2192 D, D + C \u2192 E, E + A \u2192 F",
+    "notes": "3-stage chained join pipeline"
+  },
+  "stages": [
+    {
+      "id": "stage_1",
+      "label": "Stage 1: A \u22c8 B \u2192 D",
+      "description": "Hash join on user_id \u2192 100 partitions",
+      "joinKey": "user_id",
+      "shufflePartitions": 100,
+      "metrics": {
+        "shuffleReadBytes": 6174015488,
+        "shuffleWriteBytes": 5905580032,
+        "outputPartitions": 100,
+        "skewedBuckets": 1,
+        "totalBuckets": 4,
+        "outputRecords": 20000000
+      }
+    },
+    {
+      "id": "stage_2",
+      "label": "Stage 2: D \u22c8 C \u2192 E",
+      "description": "Hash join on product_id \u2192 200 partitions",
+      "joinKey": "product_id",
+      "shufflePartitions": 200,
+      "metrics": {
+        "shuffleReadBytes": 7516192768,
+        "shuffleWriteBytes": 7247757312,
+        "outputPartitions": 200,
+        "skewedBuckets": 0,
+        "totalBuckets": 4,
+        "outputRecords": 35000000
+      }
+    },
+    {
+      "id": "stage_3",
+      "label": "Stage 3: E \u22c8 A \u2192 F",
+      "description": "Hash join on region_id \u2192 150 partitions",
+      "joinKey": "region_id",
+      "shufflePartitions": 150,
+      "metrics": {
+        "shuffleReadBytes": 9126805504,
+        "shuffleWriteBytes": 8589934592,
+        "outputPartitions": 150,
+        "skewedBuckets": 2,
+        "totalBuckets": 5,
+        "outputRecords": 42000000
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "df_a_s1",
+      "type": "dataset",
+      "label": "Dataset A",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 10000000, "bytes": 2576980378 },
+      "meta": { "partitions": 8 }
+    },
+    {
+      "id": "df_b_s1",
+      "type": "dataset",
+      "label": "Dataset B",
+      "layer": 0,
+      "stageId": "stage_1",
+      "metrics": { "records": 5000000, "bytes": 1288490189 },
+      "meta": { "partitions": 12 }
+    },
+    {
+      "id": "ex_1",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 1,
+      "stageId": "stage_1",
+      "keys": ["user_id"],
+      "shufflePartitions": 100
+    },
+    {
+      "id": "b1_0",
+      "type": "bucketGroup",
+      "label": "R0-R24",
+      "layer": 2,
+      "stageId": "stage_1",
+      "isSkewed": false,
+      "partitionRange": [0, 24],
+      "partitionCount": 25,
+      "metrics": { "records": 3750000, "bytes": 966367642 }
+    },
+    {
+      "id": "b1_1",
+      "type": "bucketGroup",
+      "label": "R25-R49",
+      "layer": 2,
+      "stageId": "stage_1",
+      "isSkewed": true,
+      "skewReason": "Hot key: guest_account",
+      "partitionRange": [25, 49],
+      "partitionCount": 25,
+      "metrics": { "records": 7500000, "bytes": 1932735283 }
+    },
+    {
+      "id": "b1_2",
+      "type": "bucketGroup",
+      "label": "R50-R74",
+      "layer": 2,
+      "stageId": "stage_1",
+      "isSkewed": false,
+      "partitionRange": [50, 74],
+      "partitionCount": 25,
+      "metrics": { "records": 2500000, "bytes": 644245094 }
+    },
+    {
+      "id": "b1_3",
+      "type": "bucketGroup",
+      "label": "R75-R99",
+      "layer": 2,
+      "stageId": "stage_1",
+      "isSkewed": false,
+      "partitionRange": [75, 99],
+      "partitionCount": 25,
+      "metrics": { "records": 1250000, "bytes": 322122547 }
+    },
+    {
+      "id": "df_d_s1",
+      "type": "dataset",
+      "label": "Dataset D",
+      "layer": 3,
+      "stageId": "stage_1",
+      "metrics": { "records": 20000000, "bytes": 5905580032 },
+      "meta": { "partitions": 100 }
+    },
+
+    {
+      "id": "df_d_s2",
+      "type": "dataset",
+      "label": "Dataset D",
+      "layer": 0,
+      "stageId": "stage_2",
+      "metrics": { "records": 20000000, "bytes": 5905580032 },
+      "meta": { "partitions": 100 }
+    },
+    {
+      "id": "df_c_s2",
+      "type": "dataset",
+      "label": "Dataset C",
+      "layer": 0,
+      "stageId": "stage_2",
+      "metrics": { "records": 8000000, "bytes": 2061584302 },
+      "meta": { "partitions": 16 }
+    },
+    {
+      "id": "ex_2",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 1,
+      "stageId": "stage_2",
+      "keys": ["product_id"],
+      "shufflePartitions": 200
+    },
+    {
+      "id": "b2_0",
+      "type": "bucketGroup",
+      "label": "R0-R49",
+      "layer": 2,
+      "stageId": "stage_2",
+      "isSkewed": false,
+      "partitionRange": [0, 49],
+      "partitionCount": 50,
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "b2_1",
+      "type": "bucketGroup",
+      "label": "R50-R99",
+      "layer": 2,
+      "stageId": "stage_2",
+      "isSkewed": false,
+      "partitionRange": [50, 99],
+      "partitionCount": 50,
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "b2_2",
+      "type": "bucketGroup",
+      "label": "R100-R149",
+      "layer": 2,
+      "stageId": "stage_2",
+      "isSkewed": false,
+      "partitionRange": [100, 149],
+      "partitionCount": 50,
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "b2_3",
+      "type": "bucketGroup",
+      "label": "R150-R199",
+      "layer": 2,
+      "stageId": "stage_2",
+      "isSkewed": false,
+      "partitionRange": [150, 199],
+      "partitionCount": 50,
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "df_e_s2",
+      "type": "dataset",
+      "label": "Dataset E",
+      "layer": 3,
+      "stageId": "stage_2",
+      "metrics": { "records": 35000000, "bytes": 7247757312 },
+      "meta": { "partitions": 200 }
+    },
+
+    {
+      "id": "df_e_s3",
+      "type": "dataset",
+      "label": "Dataset E",
+      "layer": 0,
+      "stageId": "stage_3",
+      "metrics": { "records": 35000000, "bytes": 7247757312 },
+      "meta": { "partitions": 200 }
+    },
+    {
+      "id": "df_a_s3",
+      "type": "dataset",
+      "label": "Dataset A",
+      "layer": 0,
+      "stageId": "stage_3",
+      "metrics": { "records": 10000000, "bytes": 2576980378 },
+      "meta": { "partitions": 8 }
+    },
+    {
+      "id": "ex_3",
+      "type": "exchange",
+      "label": "Exchange",
+      "layer": 1,
+      "stageId": "stage_3",
+      "keys": ["region_id"],
+      "shufflePartitions": 150
+    },
+    {
+      "id": "b3_0",
+      "type": "bucketGroup",
+      "label": "R0-R29",
+      "layer": 2,
+      "stageId": "stage_3",
+      "isSkewed": false,
+      "partitionRange": [0, 29],
+      "partitionCount": 30,
+      "metrics": { "records": 6000000, "bytes": 1717986918 }
+    },
+    {
+      "id": "b3_1",
+      "type": "bucketGroup",
+      "label": "R30-R59",
+      "layer": 2,
+      "stageId": "stage_3",
+      "isSkewed": true,
+      "skewReason": "Hot region: US-EAST",
+      "partitionRange": [30, 59],
+      "partitionCount": 30,
+      "metrics": { "records": 15000000, "bytes": 4294967296 }
+    },
+    {
+      "id": "b3_2",
+      "type": "bucketGroup",
+      "label": "R60-R89",
+      "layer": 2,
+      "stageId": "stage_3",
+      "isSkewed": true,
+      "skewReason": "Hot region: EU-WEST",
+      "partitionRange": [60, 89],
+      "partitionCount": 30,
+      "metrics": { "records": 12000000, "bytes": 3435973837 }
+    },
+    {
+      "id": "b3_3",
+      "type": "bucketGroup",
+      "label": "R90-R119",
+      "layer": 2,
+      "stageId": "stage_3",
+      "isSkewed": false,
+      "partitionRange": [90, 119],
+      "partitionCount": 30,
+      "metrics": { "records": 5000000, "bytes": 1431655765 }
+    },
+    {
+      "id": "b3_4",
+      "type": "bucketGroup",
+      "label": "R120-R149",
+      "layer": 2,
+      "stageId": "stage_3",
+      "isSkewed": false,
+      "partitionRange": [120, 149],
+      "partitionCount": 30,
+      "metrics": { "records": 4000000, "bytes": 1145324612 }
+    },
+    {
+      "id": "df_f_s3",
+      "type": "dataset",
+      "label": "Dataset F",
+      "layer": 3,
+      "stageId": "stage_3",
+      "metrics": { "records": 42000000, "bytes": 8589934592 },
+      "meta": { "partitions": 150 }
+    }
+  ],
+  "links": [
+    {
+      "id": "l_a_b1_0",
+      "source": "df_a_s1",
+      "target": "b1_0",
+      "metrics": { "records": 2500000, "bytes": 644245094 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [0-24]" }
+    },
+    {
+      "id": "l_a_b1_1",
+      "source": "df_a_s1",
+      "target": "b1_1",
+      "metrics": { "records": 5000000, "bytes": 1288490189 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [25-49]" }
+    },
+    {
+      "id": "l_a_b1_2",
+      "source": "df_a_s1",
+      "target": "b1_2",
+      "metrics": { "records": 1500000, "bytes": 386547056 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [50-74]" }
+    },
+    {
+      "id": "l_a_b1_3",
+      "source": "df_a_s1",
+      "target": "b1_3",
+      "metrics": { "records": 1000000, "bytes": 257698038 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [75-99]" }
+    },
+    {
+      "id": "l_b_b1_0",
+      "source": "df_b_s1",
+      "target": "b1_0",
+      "metrics": { "records": 1250000, "bytes": 322122547 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [0-24]" }
+    },
+    {
+      "id": "l_b_b1_1",
+      "source": "df_b_s1",
+      "target": "b1_1",
+      "metrics": { "records": 2500000, "bytes": 644245094 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [25-49]" }
+    },
+    {
+      "id": "l_b_b1_2",
+      "source": "df_b_s1",
+      "target": "b1_2",
+      "metrics": { "records": 1000000, "bytes": 257698038 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [50-74]" }
+    },
+    {
+      "id": "l_b_b1_3",
+      "source": "df_b_s1",
+      "target": "b1_3",
+      "metrics": { "records": 250000, "bytes": 64424509 },
+      "meta": { "routing": "hash(user_id) % 100 \u2192 [75-99]" }
+    },
+    {
+      "id": "l_b1_0_d",
+      "source": "b1_0",
+      "target": "df_d_s1",
+      "metrics": { "records": 3750000, "bytes": 966367642 }
+    },
+    {
+      "id": "l_b1_1_d",
+      "source": "b1_1",
+      "target": "df_d_s1",
+      "metrics": { "records": 7500000, "bytes": 1932735283 }
+    },
+    {
+      "id": "l_b1_2_d",
+      "source": "b1_2",
+      "target": "df_d_s1",
+      "metrics": { "records": 2500000, "bytes": 644245094 }
+    },
+    {
+      "id": "l_b1_3_d",
+      "source": "b1_3",
+      "target": "df_d_s1",
+      "metrics": { "records": 1250000, "bytes": 322122547 }
+    },
+
+    {
+      "id": "l_d_b2_0",
+      "source": "df_d_s2",
+      "target": "b2_0",
+      "metrics": { "records": 5000000, "bytes": 1476395008 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [0-49]" }
+    },
+    {
+      "id": "l_d_b2_1",
+      "source": "df_d_s2",
+      "target": "b2_1",
+      "metrics": { "records": 5000000, "bytes": 1476395008 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [50-99]" }
+    },
+    {
+      "id": "l_d_b2_2",
+      "source": "df_d_s2",
+      "target": "b2_2",
+      "metrics": { "records": 5000000, "bytes": 1476395008 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [100-149]" }
+    },
+    {
+      "id": "l_d_b2_3",
+      "source": "df_d_s2",
+      "target": "b2_3",
+      "metrics": { "records": 5000000, "bytes": 1476395008 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [150-199]" }
+    },
+    {
+      "id": "l_c_b2_0",
+      "source": "df_c_s2",
+      "target": "b2_0",
+      "metrics": { "records": 2000000, "bytes": 515396075 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [0-49]" }
+    },
+    {
+      "id": "l_c_b2_1",
+      "source": "df_c_s2",
+      "target": "b2_1",
+      "metrics": { "records": 2000000, "bytes": 515396075 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [50-99]" }
+    },
+    {
+      "id": "l_c_b2_2",
+      "source": "df_c_s2",
+      "target": "b2_2",
+      "metrics": { "records": 2000000, "bytes": 515396075 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [100-149]" }
+    },
+    {
+      "id": "l_c_b2_3",
+      "source": "df_c_s2",
+      "target": "b2_3",
+      "metrics": { "records": 2000000, "bytes": 515396075 },
+      "meta": { "routing": "hash(product_id) % 200 \u2192 [150-199]" }
+    },
+    {
+      "id": "l_b2_0_e",
+      "source": "b2_0",
+      "target": "df_e_s2",
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "l_b2_1_e",
+      "source": "b2_1",
+      "target": "df_e_s2",
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "l_b2_2_e",
+      "source": "b2_2",
+      "target": "df_e_s2",
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+    {
+      "id": "l_b2_3_e",
+      "source": "b2_3",
+      "target": "df_e_s2",
+      "metrics": { "records": 7000000, "bytes": 1991790387 }
+    },
+
+    {
+      "id": "l_e_b3_0",
+      "source": "df_e_s3",
+      "target": "b3_0",
+      "metrics": { "records": 4200000, "bytes": 1202590843 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [0-29]" }
+    },
+    {
+      "id": "l_e_b3_1",
+      "source": "df_e_s3",
+      "target": "b3_1",
+      "metrics": { "records": 10500000, "bytes": 3006477107 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [30-59]" }
+    },
+    {
+      "id": "l_e_b3_2",
+      "source": "df_e_s3",
+      "target": "b3_2",
+      "metrics": { "records": 8400000, "bytes": 2405181686 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [60-89]" }
+    },
+    {
+      "id": "l_e_b3_3",
+      "source": "df_e_s3",
+      "target": "b3_3",
+      "metrics": { "records": 3500000, "bytes": 1002159369 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [90-119]" }
+    },
+    {
+      "id": "l_e_b3_4",
+      "source": "df_e_s3",
+      "target": "b3_4",
+      "metrics": { "records": 2800000, "bytes": 801727495 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [120-149]" }
+    },
+    {
+      "id": "l_a_b3_0",
+      "source": "df_a_s3",
+      "target": "b3_0",
+      "metrics": { "records": 1200000, "bytes": 309237646 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [0-29]" }
+    },
+    {
+      "id": "l_a_b3_1",
+      "source": "df_a_s3",
+      "target": "b3_1",
+      "metrics": { "records": 3000000, "bytes": 773094113 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [30-59]" }
+    },
+    {
+      "id": "l_a_b3_2",
+      "source": "df_a_s3",
+      "target": "b3_2",
+      "metrics": { "records": 2400000, "bytes": 618475291 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [60-89]" }
+    },
+    {
+      "id": "l_a_b3_3",
+      "source": "df_a_s3",
+      "target": "b3_3",
+      "metrics": { "records": 1000000, "bytes": 257698038 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [90-119]" }
+    },
+    {
+      "id": "l_a_b3_4",
+      "source": "df_a_s3",
+      "target": "b3_4",
+      "metrics": { "records": 800000, "bytes": 206158430 },
+      "meta": { "routing": "hash(region_id) % 150 \u2192 [120-149]" }
+    },
+    {
+      "id": "l_b3_0_f",
+      "source": "b3_0",
+      "target": "df_f_s3",
+      "metrics": { "records": 6000000, "bytes": 1717986918 }
+    },
+    {
+      "id": "l_b3_1_f",
+      "source": "b3_1",
+      "target": "df_f_s3",
+      "metrics": { "records": 15000000, "bytes": 4294967296 }
+    },
+    {
+      "id": "l_b3_2_f",
+      "source": "b3_2",
+      "target": "df_f_s3",
+      "metrics": { "records": 12000000, "bytes": 3435973837 }
+    },
+    {
+      "id": "l_b3_3_f",
+      "source": "b3_3",
+      "target": "df_f_s3",
+      "metrics": { "records": 5000000, "bytes": 1431655765 }
+    },
+    {
+      "id": "l_b3_4_f",
+      "source": "b3_4",
+      "target": "df_f_s3",
+      "metrics": { "records": 4000000, "bytes": 1145324612 }
+    }
+  ]
+}
