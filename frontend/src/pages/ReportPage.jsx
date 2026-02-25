@@ -16,6 +16,7 @@ function ReportPage() {
   const navigate = useNavigate();
   const { puzzleId } = useParams();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showTimelinePopup, setShowTimelinePopup] = useState(false);
 
   // Get result from navigation state
   const result = location.state?.result;
@@ -30,6 +31,17 @@ function ReportPage() {
 
   // Don't render anything while redirecting
   if (!result) return null;
+
+  // Check if timeline has real data
+  const hasTimelineData = !!result?.sankey_spec;
+
+  const handleTimelineTabClick = () => {
+    if (hasTimelineData) {
+      setActiveTab('timeline');
+    } else {
+      setShowTimelinePopup(true);
+    }
+  };
 
   const handleBack = () => {
     // Use browser back to return to workspace
@@ -109,10 +121,11 @@ function ReportPage() {
             Factory Step Breakdown
           </button>
           <button
-            className={`report-tab ${activeTab === 'timeline' ? 'active' : ''}`}
-            onClick={() => setActiveTab('timeline')}
+            className={`report-tab ${activeTab === 'timeline' ? 'active' : ''} ${!hasTimelineData ? 'disabled' : ''}`}
+            onClick={handleTimelineTabClick}
           >
             Timeline View
+            {!hasTimelineData && <span className="tab-disabled-indicator">○</span>}
           </button>
           <button
             className={`report-tab ${activeTab === 'results' ? 'active' : ''}`}
@@ -311,6 +324,26 @@ function ReportPage() {
           </button>
         </div>
       </div>
+
+      {/* Timeline unavailable popup */}
+      {showTimelinePopup && (
+        <div className="popup-overlay" onClick={() => setShowTimelinePopup(false)}>
+          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-icon">📊</div>
+            <h3 className="popup-title">Timeline View Unavailable</h3>
+            <p className="popup-message">
+              This query has no join operations, so no Sankey pipeline data was generated.
+              Run a puzzle with joins (e.g. <strong>fast_join</strong>) to see the Timeline View.
+            </p>
+            <button
+              className="popup-close-btn"
+              onClick={() => setShowTimelinePopup(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
