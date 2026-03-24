@@ -92,14 +92,18 @@ class ExecutionSimulatorV2:
 
         print(f"Generating simulation from {len(execution_tree['jobs'])} real Spark jobs")
 
-        # Extract cluster config from metadata
+        # Extract cluster config and executors info from metadata
         cluster_config = metadata.get('cluster_config', {})
+        executors_info = metadata.get('executors_info', [])
 
         # Build nodes FIRST so _executor_to_node_map is available for _convert_tasks
-        nodes = self._build_nodes_from_executors(execution_tree, cluster_config)
+        nodes = self._build_nodes_from_executors(execution_tree, cluster_config, executors_info)
+
+        # Extract physical plan for better stage naming
+        physical_plan = metadata.get('physical_plan', '')
 
         # Convert execution tree to simulation models
-        stages = self._convert_stages(execution_tree)
+        stages = self._convert_stages(execution_tree, physical_plan)
         all_tasks = self._extract_all_tasks(stages)
         partitions = self._build_partitions_from_tasks(all_tasks, stages)
         shuffles = self._detect_shuffles(execution_tree, metadata)
@@ -126,18 +130,22 @@ class ExecutionSimulatorV2:
             metrics=self._calculate_metrics(execution_tree)
         )
 
-    def _convert_stages(self, execution_tree: Dict) -> List[Stage]:
+    def _convert_stages(self, execution_tree: Dict, physical_plan: str = '') -> List[Stage]:
         """
         Convert real Spark stages to Stage models.
 
         Args:
             execution_tree: Execution tree from SparkEventTracker
+            physical_plan: Physical plan string for better stage naming
 
         Returns:
             List of Stage models
         """
         stages = []
         stage_id_counter = 0
+
+        # Parse physical plan to get operations per stage
+        stage_operations = self._parse_physical_plan_stages(physical_plan)
 
         for job in execution_tree['jobs']:
             for stage_data in job['stages']:
@@ -153,8 +161,14 @@ class ExecutionSimulatorV2:
                 start_time = (submission_time / 1000.0) - self.baseline_time
                 end_time = (completion_time / 1000.0) - self.baseline_time
 
-                # Extract operation type from stage name
-                stage_name = stage_data.get('name', f"Stage {stage_data['stage_id']}")
+                # Get better stage name from physical plan or fall back to inference
+                num_tasks = stage_data.get('num_tasks', 0)
+                stage_name = self._generate_stage_name(
+                    stage_id_counter,
+                    stage_data,
+                    stage_operations,
+                    num_tasks
+                )
                 operation_type = self._infer_operation_type(stage_name)
 
                 # Convert tasks
@@ -187,6 +201,166 @@ class ExecutionSimulatorV2:
                 stage_id_counter += 1
 
         return stages
+
+    def _parse_physical_plan_stages(self, physical_plan: str) -> List[List[str]]:
+        """
+        Parse physical plan to extract operations grouped by stage boundaries.
+
+        Stages are separated by Exchange (shuffle) operations.
+
+        Args:
+            physical_plan: Physical plan string from Spark
+
+        Returns:
+            List of operation lists, one per stage (in reverse order - last stage first)
+        """
+        if not physical_plan:
+            return []
+
+        # Operations that indicate stage boundaries (shuffles)
+        stage_boundary_ops = ['Exchange']
+
+        # Operations we want to extract
+        operation_patterns = [
+            'LocalTableScan', 'FileScan', 'Scan',
+            'Filter', 'Project',
+            'HashAggregate', 'SortAggregate', 'ObjectHashAggregate',
+            'BroadcastHashJoin', 'SortMergeJoin', 'ShuffledHashJoin',
+            'Sort', 'TakeOrderedAndProject',
+            'Exchange', 'BroadcastExchange',
+            'Expand', 'Window',
+            'Union', 'Coalesce',
+            'CollectLimit', 'GlobalLimit', 'LocalLimit'
+        ]
+
+        stages = []
+        current_stage_ops = []
+
+        for line in physical_plan.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check for operations
+            for op in operation_patterns:
+                if op in line:
+                    # Check if this is a stage boundary
+                    if op in stage_boundary_ops and current_stage_ops:
+                        stages.append(current_stage_ops)
+                        current_stage_ops = [op]
+                    else:
+                        current_stage_ops.append(op)
+                    break
+
+        # Add the last stage
+        if current_stage_ops:
+            stages.append(current_stage_ops)
+
+        return stages
+
+    def _generate_stage_name(
+        self,
+        stage_idx: int,
+        stage_data: Dict,
+        stage_operations: List[List[str]],
+        num_tasks: int
+    ) -> str:
+        """
+        Generate a meaningful stage name based on stage metrics.
+
+        Args:
+            stage_idx: Index of the stage
+            stage_data: Stage data from Spark API
+            stage_operations: Parsed operations from physical plan (used as hint only)
+            num_tasks: Number of tasks (partitions) in this stage
+
+        Returns:
+            Descriptive stage name with partition count
+        """
+        # Use stage metrics as primary source (more reliable than physical plan parsing)
+        name = self._infer_stage_name_from_metrics(stage_data)
+
+        # If metrics-based name is generic, try to enhance from physical plan
+        if name == "Transform" and stage_operations:
+            # Only use physical plan if number of stages matches
+            plan_stage_idx = len(stage_operations) - 1 - stage_idx
+            if 0 <= plan_stage_idx < len(stage_operations):
+                ops = stage_operations[plan_stage_idx]
+                plan_name = self._format_operations(ops)
+                if plan_name != "Transform":
+                    name = plan_name
+
+        # Append partition count
+        return f"{name} ({num_tasks} partitions)"
+
+    def _format_operations(self, ops: List[str]) -> str:
+        """
+        Format a list of operations into a readable stage name.
+
+        Args:
+            ops: List of operation names
+
+        Returns:
+            Formatted name like "Scan + Filter" or "HashAggregate"
+        """
+        if not ops:
+            return "Transform"
+
+        # Deduplicate and prioritize important operations
+        priority_ops = []
+        seen = set()
+
+        # Priority order: Scan > Join > Aggregate > Exchange > Filter > Project > Other
+        priority_order = [
+            ('Scan', ['LocalTableScan', 'FileScan', 'Scan']),
+            ('Join', ['BroadcastHashJoin', 'SortMergeJoin', 'ShuffledHashJoin']),
+            ('Aggregate', ['HashAggregate', 'SortAggregate', 'ObjectHashAggregate']),
+            ('Exchange', ['Exchange', 'BroadcastExchange']),
+            ('Sort', ['Sort', 'TakeOrderedAndProject']),
+            ('Filter', ['Filter']),
+            ('Project', ['Project']),
+            ('Window', ['Window']),
+            ('Union', ['Union']),
+            ('Limit', ['CollectLimit', 'GlobalLimit', 'LocalLimit']),
+        ]
+
+        for display_name, patterns in priority_order:
+            for op in ops:
+                if op in patterns and display_name not in seen:
+                    priority_ops.append(display_name)
+                    seen.add(display_name)
+                    break
+
+        if not priority_ops:
+            return "Transform"
+
+        # Limit to 3 most important operations
+        return " → ".join(priority_ops[:3])
+
+    def _infer_stage_name_from_metrics(self, stage_data: Dict) -> str:
+        """
+        Infer stage name from stage metrics when physical plan is unavailable.
+
+        Args:
+            stage_data: Stage data from Spark API
+
+        Returns:
+            Inferred stage name
+        """
+        shuffle_read = stage_data.get('shuffle_read_bytes', 0) or stage_data.get('shuffleReadBytes', 0)
+        shuffle_write = stage_data.get('shuffle_write_bytes', 0) or stage_data.get('shuffleWriteBytes', 0)
+        input_bytes = stage_data.get('input_bytes', 0) or stage_data.get('inputBytes', 0)
+
+        if input_bytes > 0 and shuffle_read == 0:
+            return "Scan"
+        elif shuffle_write > 0 and shuffle_read == 0:
+            return "Scan → Exchange"
+        elif shuffle_read > 0 and shuffle_write > 0:
+            return "Exchange → Transform"
+        elif shuffle_read > 0:
+            return "Exchange → Aggregate"
+        else:
+            return "Transform"
 
     def _convert_tasks(
         self,
@@ -257,6 +431,9 @@ class ExecutionSimulatorV2:
         """
         Build partition models from task data.
 
+        Uses composite key (stage_id, partition_id) to avoid collisions since
+        Spark reuses partition IDs (0, 1, 2...) per stage.
+
         Args:
             tasks: All tasks from all stages
             stages: All stages
@@ -265,19 +442,21 @@ class ExecutionSimulatorV2:
             List of Partition models
         """
         partitions = []
-        partition_map = {}  # partition_id -> partition
+        partition_map: Dict[tuple, Partition] = {}  # (stage_id, partition_id) -> partition
+
+        # Build task_id -> stage_id mapping first
+        task_stage_map: Dict[int, int] = {}
+        for stage in stages:
+            for task in stage.tasks:
+                task_stage_map[task.id] = stage.id
 
         for task in tasks:
             partition_id = task.partition_id
+            stage_id = task_stage_map.get(task.id, 0)
 
-            if partition_id not in partition_map:
-                # Find which stage this task belongs to
-                stage_id = 0
-                for stage in stages:
-                    if task in stage.tasks:
-                        stage_id = stage.id
-                        break
-
+            # Use composite key to ensure uniqueness across stages
+            composite_key = (stage_id, partition_id)
+            if composite_key not in partition_map:
                 partition = Partition(
                     id=partition_id,
                     size_mb=0.5,  # Approximate size (could be extracted from metrics)
@@ -287,7 +466,7 @@ class ExecutionSimulatorV2:
                     parent_partitions=[],
                     child_partitions=[]
                 )
-                partition_map[partition_id] = partition
+                partition_map[composite_key] = partition
 
         partitions = list(partition_map.values())
         return partitions
@@ -346,13 +525,14 @@ class ExecutionSimulatorV2:
     def _build_nodes_from_executors(
         self,
         execution_tree: Dict,
-        cluster_config: Dict
+        cluster_config: Dict,
+        executors_info: List = None
     ) -> List[Node]:
         """
-        Build Node models from cluster_config executor list.
+        Build Node models from executors_info or cluster_config.
 
-        Uses cluster_config['executors'] for accurate per-executor cores and memory.
-        Falls back to extracting executors from tasks if cluster_config is incomplete.
+        Uses executors_info for accurate per-executor cores and memory.
+        Falls back to extracting executors from tasks if executors_info is empty.
 
         Populates self._executor_to_node_map and self._nodes_list for use by
         _convert_tasks().
@@ -360,6 +540,7 @@ class ExecutionSimulatorV2:
         Args:
             execution_tree: Execution tree with executor data
             cluster_config: Cluster configuration from executor
+            executors_info: List of ExecutorInfo with per-executor details
 
         Returns:
             List of Node models
@@ -367,21 +548,27 @@ class ExecutionSimulatorV2:
         self._executor_to_node_map: Dict[str, int] = {}
         nodes: List[Node] = []
 
-        executors_list = cluster_config.get('executors', [])
+        executors_info = executors_info or []
         mode = cluster_config.get('mode', '')
-        is_local = bool(re.match(r'^local(\[.*\])?$', mode.strip(), re.IGNORECASE)) if mode else False
+        is_local = mode == 'local'
 
-        if executors_list:
-            # Use cluster_config executors (authoritative source)
+        if executors_info:
+            # Use executors_info (authoritative source from Spark runtime)
             node_id = 0
-            for executor in executors_list:
-                eid = str(executor.get('id', ''))
+            for executor in executors_info:
+                # ExecutorInfo can be dict or object with attributes
+                if hasattr(executor, 'id'):
+                    eid = str(executor.id)
+                    cores = executor.cores
+                    memory_mb = executor.memory_mb
+                else:
+                    eid = str(executor.get('id', ''))
+                    cores = executor.get('cores', 2)
+                    memory_mb = executor.get('memory_mb', 2048)
+
                 # In cluster mode, skip the driver entry (it doesn't run tasks)
                 if eid == 'driver' and not is_local:
                     continue
-
-                cores = executor.get('cores', 2)
-                memory_mb = executor.get('memory_mb', 2048)
 
                 node = Node(
                     id=node_id,
@@ -402,9 +589,17 @@ class ExecutionSimulatorV2:
                         executor_id = task.get('executor_id', 'driver')
                         executors.add(executor_id)
 
-            cores_per_node = cluster_config.get('cluster_capacity', {}).get('total_cores', 2)
+            # Use executor_cores from config, NOT total_cores
+            executor_cores_str = cluster_config.get('executor_cores', '2')
+            try:
+                cores_per_node = int(executor_cores_str)
+            except (ValueError, TypeError):
+                cores_per_node = 2
 
             for i, executor_id in enumerate(sorted(executors)):
+                # Skip driver in cluster mode
+                if executor_id == 'driver' and not is_local:
+                    continue
                 node = Node(
                     id=i,
                     name=f"Executor {executor_id}",
@@ -448,6 +643,12 @@ class ExecutionSimulatorV2:
         """
         events = []
 
+        # Build task_id -> stage_id mapping for task events
+        task_stage_map: Dict[int, int] = {}
+        for stage in stages:
+            for task in stage.tasks:
+                task_stage_map[task.id] = stage.id
+
         # Stage events
         for stage in stages:
             events.append(SimulationEvent(
@@ -463,17 +664,20 @@ class ExecutionSimulatorV2:
                 details={"name": stage.name}
             ))
 
-        # Task events
+        # Task events - include stage_id for frontend animation
         for task in tasks:
+            stage_id = task_stage_map.get(task.id)
             events.append(SimulationEvent(
                 time=task.start_time,
                 event_type="task_start",
+                stage_id=stage_id,
                 task_id=task.id,
                 details={"partition_id": task.partition_id, "node_id": task.node_id}
             ))
             events.append(SimulationEvent(
                 time=task.end_time,
                 event_type="task_end",
+                stage_id=stage_id,
                 task_id=task.id,
                 details={"duration": task.duration}
             ))

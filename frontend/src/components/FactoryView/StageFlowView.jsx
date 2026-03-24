@@ -71,7 +71,7 @@ function StageFlowView({ stageFlowData, selectedStageIndex: externalSelectedStag
     <div className="stage-flow-view">
       {/* [A5.1] Header with overall explanation */}
       <div className="stage-flow-header">
-        <h2>[A5] Step-by-Step Execution</h2>
+        <h2>Step-by-Step Execution</h2>
         <p className="overall-explanation">{explanation}</p>
         {shuffleCount > 0 && (
           <div className="shuffle-warning">

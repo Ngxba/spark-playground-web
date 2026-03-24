@@ -56,6 +56,12 @@ function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) 
     const isPast = index < currentStageIndex;
     const stageColor = getStageColor(stage.type);
 
+    // Check if this stage causes partition change (shuffle or repartition)
+    const hasPartitionChange = stage.isShuffle ||
+      stage.name.toLowerCase().includes('exchange') ||
+      stage.name.toLowerCase().includes('repartition') ||
+      (stage.input.partitionCount !== stage.output.partitionCount);
+
     return (
       <div key={stage.id} className="full-flow-stage-group">
         {/* Stage Box */}
@@ -75,22 +81,30 @@ function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) 
             </div>
           </div>
 
-          {/* Input Partitions */}
-          <div className="full-flow-partitions">
-            {renderPartitionGroup(stage.input.partitionCount, index, 'input')}
-          </div>
+          {/* Show before/after partitions only for shuffle/repartition, otherwise just current */}
+          {hasPartitionChange ? (
+            <>
+              {/* Input Partitions */}
+              <div className="full-flow-partitions">
+                {renderPartitionGroup(stage.input.partitionCount, index, 'input')}
+              </div>
 
-          {/* Shuffle Indicator */}
-          {stage.isShuffle && (
-            <div className="full-flow-shuffle-badge">
-              🔀 Shuffle
+              {/* Shuffle/Repartition Indicator */}
+              <div className="full-flow-shuffle-badge">
+                🔀 {stage.name.toLowerCase().includes('repartition') ? 'Repartition' : 'Shuffle'}
+              </div>
+
+              {/* Output Partitions */}
+              <div className="full-flow-partitions">
+                {renderPartitionGroup(stage.output.partitionCount, index, 'output')}
+              </div>
+            </>
+          ) : (
+            /* Single partition count for non-shuffle stages */
+            <div className="full-flow-partitions">
+              {renderPartitionGroup(stage.output.partitionCount, index, 'current')}
             </div>
           )}
-
-          {/* Output Partitions */}
-          <div className="full-flow-partitions">
-            {renderPartitionGroup(stage.output.partitionCount, index, 'output')}
-          </div>
         </div>
 
         {/* Connection Arrow to Next Stage */}
@@ -125,7 +139,7 @@ function FullDataFlowVisualization({ stages, currentStageIndex, onStageClick }) 
 
   return (
     <div className="full-data-flow-visualization">
-      <h4>[A6.3] 📊 Complete Data Flow Pipeline</h4>
+      <h4>📊 Complete Data Flow Pipeline</h4>
       <div className="full-flow-container">
         {stages.map((stage, index) =>
           renderStageConnection(stage, index, stages[index + 1])

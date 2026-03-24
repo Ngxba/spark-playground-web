@@ -156,10 +156,6 @@ class JudgeV2:
         if metadata and 'cluster_config' in metadata:
             cluster_config = metadata['cluster_config']
 
-            # Add runtime partition count from execution_simulation
-            if execution_simulation:
-                cluster_config['runtime_partitions'] = execution_simulation.partition_count
-
         return RunResult(
             correct=is_correct,
             output=result,
@@ -399,10 +395,22 @@ class JudgeV2:
                 shuffle_count += 1
 
             # Get partition counts
-            input_partitions = stage.parallelism
-            output_partitions = stage.parallelism
+            # For shuffle stages: input = current stage partitions, output = next stage partitions
+            # For non-shuffle stages: input = output = current stage partitions
+            current_partitions = stage.parallelism or len(stage.tasks) or 1
+            next_partitions = current_partitions
             if i + 1 < len(execution_simulation.stages):
-                output_partitions = execution_simulation.stages[i + 1].parallelism
+                next_stage = execution_simulation.stages[i + 1]
+                next_partitions = next_stage.parallelism or len(next_stage.tasks) or current_partitions
+
+            # For shuffle/exchange stages, show before→after partition change
+            if is_shuffle or 'exchange' in (stage.name or '').lower():
+                input_partitions = current_partitions
+                output_partitions = next_partitions
+            else:
+                # Non-shuffle stages: just show current partitions
+                input_partitions = current_partitions
+                output_partitions = current_partitions
 
             # Check for repartition
             is_repartition = input_partitions != output_partitions and not is_shuffle

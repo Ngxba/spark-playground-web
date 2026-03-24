@@ -125,10 +125,6 @@ class Judge:
         if execution_metadata and 'cluster_config' in execution_metadata:
             cluster_config = execution_metadata['cluster_config']
 
-            # Add runtime partition count from execution_simulation
-            if execution_simulation:
-                cluster_config['runtime_partitions'] = execution_simulation.partition_count
-
         return RunResult(
             correct=is_correct,
             output=result,
